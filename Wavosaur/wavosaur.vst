@@ -1,0 +1,15 @@
+[Plug000]
+Name=DoubleDelay
+Path=..\Debug\doubledelay.dll
+Vendor=bFooz
+VST SDK Version=2400
+Plug Version=100
+IsSynth=0
+Input number=1
+Output number=2
+Parameter number=3
+Program number=1
+UID=DDly
+Editor GUI=0
+[Total]
+Counter=1
