@@ -49,8 +49,10 @@ protected:
 	void setGain(float gain);
 
 
-	float fInput, fAttack, fRelease, fRatio, fTresh, fGain;
-	float pInput, pAttack, pRelease, pRatio, pTresh, pGain;
+	long sr, counter, max_counter;
+	float fInput, fAttack, fRelease, fRatio, fTresh, fGain; //vstupna hodnota z vst ovladaca ([0,1])
+	float pInput, pAttack, pRelease, pRatio, pTresh, pGain; //vystupna hodnota
+	long sAttack, sRelease; //hodnota prepocitana na sample
 	char programName[kVstMaxProgNameLen + 1];
 };
 

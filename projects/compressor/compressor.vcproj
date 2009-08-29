@@ -186,18 +186,6 @@
 				>
 			</File>
 		</Filter>
-		<Filter
-			Name="gui"
-			>
-			<File
-				RelativePath="..\..\gui\skuska.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\gui\skuska.h"
-				>
-			</File>
-		</Filter>
 	</Files>
 	<Globals>
 	</Globals>

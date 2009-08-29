@@ -47,8 +47,7 @@ protected:
 	double pi;
 	float fDelay, fSweep, fSpeed, fMix, delay_sucinitel, sweep_sucinitel;
 	float speed, sr;
-	float* bufferL;
-	float* bufferR;
+	float* buffer;
 	long delay, sweep, act_delay, max_delay, counter, kdesom;
 };
 

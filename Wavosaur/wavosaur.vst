@@ -1,15 +1,15 @@
 [Plug000]
-Name=DoubleDelay
-Path=..\Debug\doubledelay.dll
+Name=Flanger
+Path=..\Debug\flanger.dll
 Vendor=bFooz
 VST SDK Version=2400
 Plug Version=100
 IsSynth=0
 Input number=1
 Output number=2
-Parameter number=3
+Parameter number=4
 Program number=1
-UID=DDly
+UID=Flng
 Editor GUI=0
 [Total]
 Counter=1

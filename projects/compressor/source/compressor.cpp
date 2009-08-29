@@ -16,6 +16,9 @@ Compressor::Compressor (audioMasterCallback audioMaster)
 	canProcessReplacing ();	// supports replacing output
 	//canDoubleReplacing ();	// supports double precision processing
 	vst_strncpy (programName, "Default", kVstMaxProgNameLen);	// default program name
+	sr = getSampleRate();
+	counter = 0;
+	max_counter = 100;
 
 	setInput(0.6);
 	setAttack(0.0);
@@ -145,12 +148,14 @@ void Compressor::setInput(float a) {
 //-----------------------------------------------------------------------------------------
 void Compressor::setAttack(float a) {
 	fAttack = a;
-	pAttack = pow(a,5)*1000;
+	pAttack = (pow(a,5)*1000)+0.1;
+	sAttack = (long)(sr * pAttack);
 }
 //-----------------------------------------------------------------------------------------
 void Compressor::setRelease(float a){
 	fRelease = a;
-	pRelease = pow(a,5)*1000;
+	pRelease = (pow(a,5)*1000)+0.1;
+	sRelease = (long)(sr * pRelease);
 }
 //-----------------------------------------------------------------------------------------
 void Compressor::setRatio(float a){
@@ -178,6 +183,7 @@ void Compressor::processReplacing (float** inputs, float** outputs, VstInt32 sam
     while (--sampleFrames >= 0)
      {
 		 
+
      }
 }
 

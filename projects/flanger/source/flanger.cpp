@@ -10,37 +10,33 @@ AudioEffect* createEffectInstance (audioMasterCallback audioMaster)
 Flanger::Flanger (audioMasterCallback audioMaster)
 : AudioEffectX (audioMaster, 1, kNumParams)	// 1 program, 1 parameter only
 {
-	setNumInputs (2);		// stereo in
+	setNumInputs (1);		// mono in
 	setNumOutputs (2);		// stereo out
 	setUniqueID ('Flng');	// identify
 	canProcessReplacing ();	// supports replacing output
 	//canDoubleReplacing ();	// supports double precision processing
 	
 	sr = getSampleRate();
-	setSpeed(1);
-	setSweep(1);
-	setDelay(1);
+	setSpeed(0.5);
+	setSweep(0.5);
+	setDelay(0.5);
 	fMix = 0.5;
-	delay_sucinitel = 0.01;
+	delay_sucinitel = 0.01; //delay max 10 ms
 	sweep_sucinitel = 0.01;
-	//max_delay = 1;
 	pi = 3.141592653589793238462643383;
-	//pi = 3.14;
 	vst_strncpy(programName, "Defalut", kVstMaxProgNameLen);
 	counter = 0;
 	kdesom=0;
-	float pom = delay*delay_sucinitel;
-	max_delay = delay*pom+sweep*sweep_sucinitel;
-	bufferL = new float[max_delay];
-	bufferR = new float[max_delay];
+
+	max_delay =(long)sr;
+	buffer = new float[max_delay];
 	resume();	
 }
 
 //-------------------------------------------------------------------------------------------------------
 Flanger::~Flanger ()
 {
-	delete[] bufferL;
-	delete[] bufferR;
+	delete[] buffer;
 }
 
 //-------------------------------------------------------------------------------------------------------
@@ -145,20 +141,18 @@ VstInt32 Flanger::getVendorVersion ()
 //-----------------------------------------------------------------------------------------
 void Flanger::resume ()
 {
-	memset (bufferR, 0, sr * sizeof (float));
-	AudioEffectX::resume ();
-	memset (bufferL, 0, sr * sizeof (float));
+	memset (buffer, 0, sr * sizeof (float));
 	AudioEffectX::resume ();
 }
 //-----------------------------------------------------------------------------------------
 void Flanger::setDelay(float fdelay) {
 	fDelay = fdelay;
-	delay = (sr)*fdelay; //delay max 10 ms;
+	delay = (sr)*fdelay;	
 }
 //------------------------------------------------------------------------------------------
 void Flanger::setSweep(float fsweep) {
 	fSweep = fsweep;
-	sweep = (sr)*fsweep;	
+	sweep = (sr)*fsweep;
 }
 //------------------------------------------------------------------------------------------
 void Flanger::setSpeed(float fspeed){ //speed = kolko vln za sekundu, frekvencia
@@ -169,14 +163,13 @@ void Flanger::setSpeed(float fspeed){ //speed = kolko vln za sekundu, frekvencia
 void Flanger::processReplacing (float** inputs, float** outputs, VstInt32 sampleFrames)
 {
     float* in1  =  inputs[0];
-    float* in2  =  inputs[1];
     float* out1 = outputs[0];
-    float* out2 = outputs[1];
+	float* out2 = outputs[1];
 	float act_sweep = 0;	//aktualny sweep vypocitany podla aktualneho lfo
 	float act_delay = 0;	//aktualny delay
 	float max_counter;
-	long pom1, pom2;
-	float lfo, x1, x2, a1, b1, a2, b2;
+	long pom1 = 0, pom2 = 0;
+	float lfo, x1, a1, b1;
     while (--sampleFrames >= 0)
     {
 
@@ -188,36 +181,29 @@ void Flanger::processReplacing (float** inputs, float** outputs, VstInt32 sample
 			counter=0; //reset pocitadla, sma na konci
 		}
 		
-
-		lfo = sin(2 * pi * (counter/max_counter));	//aktualna amplituda lfo
+		lfo = 1 + sin(2 * pi * (counter/max_counter));	//aktualna amplituda lfo
 		act_sweep = sweep*sweep_sucinitel * lfo;					//aktualny sweep
 		act_delay = delay*delay_sucinitel + act_sweep;			//aktualny celkovy delay
 
-				
 		x1 = *in1++;
-		x2 = *in2++;
-
-		bufferL[kdesom]=x1;
+		//x2 = *in2++;
+		
+		//linearna interpolacia
+		buffer[kdesom]=x1;
 		pom1 = kdesom-floor(act_delay);
 		if (pom1 < 0) pom1 += (max_delay);
 		pom2 = kdesom-floor(act_delay)-1;
 		if (pom2 < 0) pom2 += (max_delay);
 
-		a1 = (1-(act_delay-floor(act_delay)))*bufferL[pom1];
-		//b1 = (act_delay-floor(act_delay))*bufferL[pom2];
+		a1 = (1-(act_delay-floor(act_delay)))*buffer[pom1];
+		b1 = ((act_delay-floor(act_delay)))*buffer[pom2];
 		
-		//a1 = act_delay-floor(act_delay) * bufferL[((long)(kdesom-floor(act_delay)+1))%max_delay];
-		//b1 = 1-act_delay-floor(act_delay) * bufferL[((long)(kdesom-floor(act_delay)))%max_delay];
-		if (kdesom < (max_delay-1)) kdesom++;
+		if (kdesom < (max_delay-1)) kdesom++; //pozicia v bufferi
 		else kdesom=0;
 		
-				
-		(*out1++) = a1;
+		(*out1++) = x1 + fMix*(a1+b1);
+		(*out2++) = x1 + fMix*(a1+b1);
 		
-
-	
-		 //if (out1) *out1++=x1*fDry + y1*fWet;
-		 //if (out2) *out2++=x2*fDry + y2*fWet;
      }
 }
 
