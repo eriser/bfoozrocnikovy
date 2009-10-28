@@ -5,11 +5,13 @@
 
 enum {
 	kInput,
+	kLimiter,
 	kAttack,
 	kRelease,
 	kRatio,
 	kTresh,
-	kGain,
+	kAutoMakeUp,
+	kOutput,
 	kNumParams
 };
 
@@ -42,17 +44,26 @@ public:
 protected:
 
 	void setInput(float input);
+	void setLimiter(float limiter);
 	void setAttack(float attack);
 	void setRelease(float release);
 	void setRatio(float ratio);
 	void setTresh(float tresh);
-	void setGain(float gain);
+	void setAutoMakeUp(float automakeup);
+	void setOutput(float Output);
+
+	float funLimiter(float in);
+	float funCompressor(float in);
 
 
-	long sr, counter, max_counter;
-	float fInput, fAttack, fRelease, fRatio, fTresh, fGain; //vstupna hodnota z vst ovladaca ([0,1])
-	float pInput, pAttack, pRelease, pRatio, pTresh, pGain; //vystupna hodnota
-	long sAttack, sRelease; //hodnota prepocitana na sample
+	long sr;
+	float iInput, iLimiter, iAttack, iRelease, iRatio, iTresh, iAutoMakeUp, iOutput; //(input) vstupna hodnota z vst ovladaca ([0,1])
+	float oInput, oAttack, oRelease, oRatio, oTresh, oOutput; //(output) vystupna hodnota, ktora je zobrazovana na ovladaci
+	float uInput, uRatio, uTresh, uOutput; //(used) hodnota, ktora sa pouziva
+	long uAttack, uRelease; //hodnota prepocitana na sample
+	long att_counter, rel_counter; //odpocitavanie pre attack a release, v samploch
+	float oldOutput;
+	bool uAutoMakeUp, oAutoMakeUp, uLimiter, oLimiter, komprimuj;
 	char programName[kVstMaxProgNameLen + 1];
 };
 
