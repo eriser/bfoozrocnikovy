@@ -1,5 +1,10 @@
 #include "compressor.h"
 #include <cmath>
+#include <fstream>
+#include <iostream>
+
+//using namespace std;
+
 
 AudioEffect* createEffectInstance (audioMasterCallback audioMaster)
 {
@@ -20,8 +25,8 @@ Compressor::Compressor (audioMasterCallback audioMaster)
 
 	setInput(0.5);
 	setLimiter(0);
-	setAttack(0.0);
-	setRelease(0.0);
+	setAttack(0.45684682951182480822693697556342); //pow((20-0.1)/1000, 1/5));
+	setRelease(0.63083110250440248354216236021084); //pow((100-0.1)/1000, 1/5));
 	setRatio(0);
 	setTresh(1);
 	setOutput(0.5);
@@ -29,6 +34,7 @@ Compressor::Compressor (audioMasterCallback audioMaster)
 	setAutoMakeUp(0);
 	att_counter = 0;
 	rel_counter = 0;
+	att_counter_old = 0;
 	komprimuj = false;
 }
 
@@ -70,12 +76,12 @@ float Compressor::getParameter (VstInt32 index)
 	float vystup = 0;
 	switch (index) {
 		case kInput		:	vystup = iInput; break;
-		case kLimiter	:	vystup = iLimiter; break;
+		case kLimiter	:	vystup = floor(iLimiter+0.5); break;
 		case kAttack	:	vystup = iAttack; break;
 		case kRelease	:	vystup = iRelease; break;
 		case kRatio		:	vystup = iRatio; break;
 		case kTresh		:	vystup = iTresh; break;
-		case kAutoMakeUp :	vystup = iAutoMakeUp; break;
+		case kAutoMakeUp :	vystup = floor(iAutoMakeUp+0.5); break;
 		case kOutput		:	vystup = iOutput; break;
 	}
 	return vystup;
@@ -117,10 +123,10 @@ void Compressor::getParameterDisplay (VstInt32 index, char* text)
 		case kTresh		:	dB2string(oTresh, text, kVstMaxParamStrLen); break;
 		case kAutoMakeUp :	{
 								if (oAutoMakeUp) { 
-									vst_strncpy (text, "YES", kVstMaxParamStrLen);
+									vst_strncpy (text, "ON", kVstMaxParamStrLen);
 								}
 								else {
-									vst_strncpy (text, "NO", kVstMaxParamStrLen);
+									vst_strncpy (text, "OFF", kVstMaxParamStrLen);
 								}
 								break;
 							}
@@ -190,13 +196,13 @@ void Compressor::setLimiter(float a) {
 void Compressor::setAttack(float a) {
 	iAttack = a;
 	oAttack = (pow(a,5)*1000)+0.1;
-	uAttack = (long)(sr * oAttack);
+	uAttack = (long)(sr * oAttack / 1000); //atack v samploch
 }
 //-----------------------------------------------------------------------------------------
 void Compressor::setRelease(float a){
 	iRelease = a;
 	oRelease = (pow(a,5)*1000)+0.1;
-	uRelease = (long)(sr * oRelease);
+	uRelease = (long)(sr * oRelease / 1000); //release v samploch
 }
 //-----------------------------------------------------------------------------------------
 void Compressor::setRatio(float a){
@@ -231,24 +237,37 @@ void Compressor::setOutput(float a){
 //-----------------------------------------------------------------------------------------
 void Compressor::processReplacing (float** inputs, float** outputs, VstInt32 sampleFrames)
 {
-    float* in  =  inputs[0];
-    float* out = outputs[0];
+	
+	/*ofstream log;
+	log.open("log.txt");
+	log << "COMPRESSOR LOG";
+	log << "\nattack = " << uAttack;
+	log << "\nrelease = " << uRelease;
+	log << "\ntreshold = " << uTresh;
+	log << "\n";*/
 
+	float* in  =  inputs[0];
+    float* out = outputs[0];
+	char buffer[10];
 	while (--sampleFrames >= 0){
-		if (att_counter > 0) {
-			att_counter--;
-		}
+		float o;
 		if (rel_counter > 0) {
 			rel_counter--;
 		}
+		if (att_counter > 0) {
+			att_counter--;
+		}
 		float x = uInput * (*in++);
 		if (uLimiter) {
-			(*out++) = funLimiter(x);
+			o = funLimiter(x);
 		}
 		else {
-			(*out++) = funCompressor(x);
+			o = funCompressor(x);
 		}
+		if (uAutoMakeUp)	(*out++) = (o * (1/uTresh));
+		else				(*out++) = (o * uOutput);
 	}
+
 }
 
 //-----------------------------------------------------------------------------------------
@@ -264,36 +283,39 @@ float Compressor::funLimiter(float in){
 		o = -uTresh;
 	}
 
-	if (uAutoMakeUp) return (o * (1/uTresh));
-	else return (o * uOutput);
+	return o;
 }
 //-----------------------------------------------------------------------------------------
 float Compressor::funCompressor(float in){
-	float o;
-
-	if (rel_counter < 0) {
+	float o = 0;
+	
+	if (rel_counter>0) {
+		komprimuj = true;
+	}
+	else {
 		komprimuj = false;
 	}
-
-	if (komprimuj) {
-		o = uRatio * in;
-		if (abs(in)>uTresh) {
+	
+	if (abs(in)>uTresh) { //prekrocenie tresholdu
+		if (rel_counter == 0 && att_counter == 0) {
 			att_counter = uAttack;
+		}
+		else if (att_counter==0) {
+			rel_counter = uRelease;
 		}
 	}
 
-	if (abs(in)<uTresh) {
-		o = in;
+	if (att_counter == 1) {
+		rel_counter = uRelease + 1;
 	}
-	else if (in>0){
-		att_counter = uAttack;
-		komprimuj = true;
-		o = uTresh;
+
+	if (komprimuj && abs(in)>uTresh) {
+		o = uTresh + (abs(in) - uTresh)*uRatio;
+		if (in<0) { o = -o; }
 	}
 	else {
-		att_counter = uAttack;
-		komprimuj = true;
-		o = -uTresh;
+		o = in;
 	}
-	return (in * uOutput);
+
+	return (o);
 }

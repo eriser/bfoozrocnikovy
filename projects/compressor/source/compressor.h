@@ -61,7 +61,7 @@ protected:
 	float oInput, oAttack, oRelease, oRatio, oTresh, oOutput; //(output) vystupna hodnota, ktora je zobrazovana na ovladaci
 	float uInput, uRatio, uTresh, uOutput; //(used) hodnota, ktora sa pouziva
 	long uAttack, uRelease; //hodnota prepocitana na sample
-	long att_counter, rel_counter; //odpocitavanie pre attack a release, v samploch
+	long att_counter, att_counter_old, rel_counter; //odpocitavanie pre attack a release, v samploch
 	float oldOutput;
 	bool uAutoMakeUp, oAutoMakeUp, uLimiter, oLimiter, komprimuj;
 	char programName[kVstMaxProgNameLen + 1];
