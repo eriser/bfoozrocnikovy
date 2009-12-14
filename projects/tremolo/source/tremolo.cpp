@@ -8,7 +8,7 @@ AudioEffect* createEffectInstance (audioMasterCallback audioMaster)
 
 //-------------------------------------------------------------------------------------------------------
 Tremolo::Tremolo (audioMasterCallback audioMaster)
-: AudioEffectX (audioMaster, 1, kNumParams)	// 1 program, 1 parameter only
+: AudioEffectX (audioMaster, 1, kNumParams)	// 1 program
 {
 	setNumInputs (2);		// stereo in
 	setNumOutputs (2);		// stereo out

@@ -9,6 +9,12 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "flanger", "projects\flanger
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "compressor", "projects\compressor\compressor.vcproj", "{A1F5B181-2BC5-401B-9D95-F019B3FC7BC6}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pitch_shifter", "projects\pitch_shifter\pitch_shifter.vcproj", "{96086DB9-A865-4188-9D6B-276E3FD0707C}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "skuska", "projects\skuska\skuska.vcproj", "{52A015C0-8024-4FA2-823C-98A8E0AC8D51}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "equalizer", "projects\equalizer\equalizer.vcproj", "{F0687015-2365-4645-A83D-435FCF3D9CDB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -31,6 +37,18 @@ Global
 		{A1F5B181-2BC5-401B-9D95-F019B3FC7BC6}.Debug|Win32.Build.0 = Debug|Win32
 		{A1F5B181-2BC5-401B-9D95-F019B3FC7BC6}.Release|Win32.ActiveCfg = Release|Win32
 		{A1F5B181-2BC5-401B-9D95-F019B3FC7BC6}.Release|Win32.Build.0 = Release|Win32
+		{96086DB9-A865-4188-9D6B-276E3FD0707C}.Debug|Win32.ActiveCfg = Debug|Win32
+		{96086DB9-A865-4188-9D6B-276E3FD0707C}.Debug|Win32.Build.0 = Debug|Win32
+		{96086DB9-A865-4188-9D6B-276E3FD0707C}.Release|Win32.ActiveCfg = Release|Win32
+		{96086DB9-A865-4188-9D6B-276E3FD0707C}.Release|Win32.Build.0 = Release|Win32
+		{52A015C0-8024-4FA2-823C-98A8E0AC8D51}.Debug|Win32.ActiveCfg = Debug|Win32
+		{52A015C0-8024-4FA2-823C-98A8E0AC8D51}.Debug|Win32.Build.0 = Debug|Win32
+		{52A015C0-8024-4FA2-823C-98A8E0AC8D51}.Release|Win32.ActiveCfg = Release|Win32
+		{52A015C0-8024-4FA2-823C-98A8E0AC8D51}.Release|Win32.Build.0 = Release|Win32
+		{F0687015-2365-4645-A83D-435FCF3D9CDB}.Debug|Win32.ActiveCfg = Debug|Win32
+		{F0687015-2365-4645-A83D-435FCF3D9CDB}.Debug|Win32.Build.0 = Debug|Win32
+		{F0687015-2365-4645-A83D-435FCF3D9CDB}.Release|Win32.ActiveCfg = Release|Win32
+		{F0687015-2365-4645-A83D-435FCF3D9CDB}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
