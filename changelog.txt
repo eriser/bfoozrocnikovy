@@ -1,0 +1,6 @@
+03.03.10 - dokonceny Wave loader, VstLoader, rozrobena samotna aplikacia
+14.12.09 - skoro dokonceny pitch-shifter, rozrobeny equalizer(FFT)
+07.11.09 - dokonceny compressor
+28.10.09 - rozrobeny compressor, v ramci neho dorobeny limiter
+29.08.09 - dokonceny flanger
+13.08.09 - hotove efekty tremolo a doubledelay, rozrobene flanger a comp

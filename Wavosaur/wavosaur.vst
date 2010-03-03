@@ -1,0 +1,54 @@
+[Plug000]
+Name=Compressor
+Path=..\Debug\compressor.dll
+Vendor=bFooz
+VST SDK Version=2400
+Plug Version=100
+IsSynth=0
+Input number=1
+Output number=1
+Parameter number=8
+Program number=1
+UID=Comp
+Editor GUI=0
+[Total]
+Counter=4
+[Plug001]
+Name=DoubleDelay
+Path=..\Debug\doubledelay.dll
+Vendor=bFooz
+VST SDK Version=2400
+Plug Version=100
+IsSynth=0
+Input number=1
+Output number=2
+Parameter number=3
+Program number=1
+UID=DDly
+Editor GUI=0
+[Plug002]
+Name=Flanger
+Path=..\Debug\flanger.dll
+Vendor=bFooz
+VST SDK Version=2400
+Plug Version=100
+IsSynth=0
+Input number=1
+Output number=2
+Parameter number=4
+Program number=1
+UID=Flng
+Editor GUI=0
+[Plug003]
+Name=Tremolo
+Path=..\Debug\tremolo.dll
+Vendor=Steinberg Media Technologies
+VST SDK Version=2400
+Plug Version=700
+IsSynth=0
+Input number=2
+Output number=2
+Parameter number=2
+Program number=1
+UID=Trem
+Editor GUI=0
