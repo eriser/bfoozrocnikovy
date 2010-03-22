@@ -11,6 +11,7 @@
 
 WaveReader::WaveReader(String ^ name) {	//konstruktor
 
+	this->name = name;
 	num_chan = 0;
 	sample_rate = 0;
 	length = 0;

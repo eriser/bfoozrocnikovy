@@ -39,9 +39,10 @@ public:
 	virtual VstInt32 getVendorVersion ();
 
 protected:
-	long fft_size;
 	void setShift(float a);
-	void array_shift(float x[]);
+	void setFftSize(float a);
+	void setOverSamp(float a);
+	void array_shift(float* x, long length);	//posunie pole do lava o length/oversamp samplov
 	void pitch_shift(float *magn_in, float *freq_in, float *magn_out, float *freq_out);
 	void analyse(float *signal_fft, float *magn_in, float *freq_in);
 	void synthese(float *magn_in, float *freq_in, float *signal_fft);
@@ -49,15 +50,18 @@ protected:
 
 	float sr;
 	float iShift, oShift, uShift;
+	long uFftSize, uFftSize2;
+	long uOverSamp;	//oversampling faktor
 	char programName[kVstMaxProgNameLen + 1];
 	int counter, counter2;
-	long fft_size2;
+	long FftSizeMax, FftSizeMax2;
+	long uFftSize_os34;
+	long uFftSize_os14;
 	
 	float pi;
-	float *signal_in, *signal_out, *signal_fft;
+	float *signal_in, *signal_in2, *signal_out, *signal_out2, *signal_fft;
 	float *phase_old, *magn_in, *magn_out, *freq_in, *freq_out, *phase_sum;
 	double phase_expect; //ocakavany fazovy rozdiel
-	double oversamp; //oversampling factor
 };
 
 #endif

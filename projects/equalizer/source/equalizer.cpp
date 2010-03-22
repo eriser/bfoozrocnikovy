@@ -14,9 +14,9 @@ Equalizer::Equalizer (audioMasterCallback audioMaster)
 : AudioEffectX (audioMaster, 1, kNumParams)	// 1 program, 1 parameter only
 {
 	
-	setNumInputs (1);		// stereo in
-	setNumOutputs (1);		// stereo out
-	setUniqueID ('Ptch');	// identify
+	setNumInputs (2);		// stereo in
+	setNumOutputs (2);		// stereo out
+	setUniqueID ('Eqlz');	// identify
 	canProcessReplacing ();	// supports replacing output
 	//canDoubleReplacing ();	// supports double precision processing
 
@@ -25,31 +25,39 @@ Equalizer::Equalizer (audioMasterCallback audioMaster)
 	setBass(0.5);
 	setMid(0.5);
 	setTreb(0.5);
+	setGain(0.5);
 
-	freqBass = 1000;
+	freqBass = 100;
 	freqMid = 1000;
 	freqTreb = 10000;
 
 	pi = 3.141592653589793238462643383279502;
 	sr = getSampleRate();
 	counter = 0;
-	fft_size = 2048;
-	freqPerBin = sr / fft_size;
+	fftSize = 2048;
+	fftSize2 = fftSize / 2;
+	freqPerBin = sr / fftSize;
 
-	signal_in = new float[fft_size];
-	signal_fft = new float[fft_size*2];
-	signal_out = new float[fft_size*2];
-	memset(signal_in, 0, fft_size * sizeof(float));
-	memset(signal_out, 0, fft_size* 2 * sizeof(float));
-	memset(signal_fft, 0, fft_size*2 * sizeof(float));
+	signal_in = new float[fftSize];
+	signal_in2 = new float[fftSize];
+	signal_fft = new float[fftSize*2];
+	signal_out = new float[fftSize];
+	signal_out2 = new float[fftSize];
+	memset(signal_in, 0, fftSize * sizeof(float));
+	memset(signal_in2, 0, fftSize * sizeof(float));
+	memset(signal_out, 0, fftSize * sizeof(float));
+	memset(signal_out2, 0, fftSize * sizeof(float));
+	memset(signal_fft, 0, fftSize * 2 * sizeof(float));
 }
 
 //-------------------------------------------------------------------------------------------------------
 Equalizer::~Equalizer ()
 {
-	/*delete[] signal_in;
-	delete[] signal_out;
-	delete[] signal_fft;*/
+	delete [] signal_in;
+	delete [] signal_in2;
+	delete [] signal_out;
+	delete [] signal_out2;
+	delete [] signal_fft;
 }
 
 //-------------------------------------------------------------------------------------------------------
@@ -71,6 +79,7 @@ void Equalizer::setParameter (VstInt32 index, float value)
 		case kBass	:	setBass(value); break;
 		case kMid	:	setMid(value); break;
 		case kTreb	:	setTreb(value); break;
+		case kGain	:	setGain(value); break;
 	}
 }
 
@@ -82,6 +91,7 @@ float Equalizer::getParameter (VstInt32 index)
 		case kBass	:	vystup = iBass; break;
 		case kMid	:	vystup = iMid; break;
 		case kTreb	:	vystup = iTreb; break;
+		case kGain	:	vystup = iGain;	break;
 	}
 	return vystup;
 }
@@ -93,6 +103,7 @@ void Equalizer::getParameterName (VstInt32 index, char* label)
 		case kBass	:	vst_strncpy (label, "Bass", kVstMaxParamStrLen); break;
 		case kMid	:	vst_strncpy (label, "Middle", kVstMaxParamStrLen); break;
 		case kTreb	:	vst_strncpy (label, "Treble", kVstMaxParamStrLen); break;
+		case kGain	:	vst_strncpy (label, "Output", kVstMaxParamStrLen); break;
 	}
 	
 }
@@ -101,9 +112,10 @@ void Equalizer::getParameterName (VstInt32 index, char* label)
 void Equalizer::getParameterDisplay (VstInt32 index, char* text)
 {
 	switch (index) {
-		case kBass	:	float2string(oBass, text, kVstMaxParamStrLen); break;
+		case kBass	:	dB2string(oBass, text, kVstMaxParamStrLen); break;
 		case kMid	:	dB2string(oMid, text, kVstMaxParamStrLen); break;
 		case kTreb	:	dB2string(oTreb, text, kVstMaxParamStrLen); break;
+		case kGain	:	dB2string(oGain, text, kVstMaxParamStrLen); break;
 	}
 }
 
@@ -114,6 +126,7 @@ void Equalizer::getParameterLabel (VstInt32 index, char* label)
 		case kBass	:	vst_strncpy (label, "dB", kVstMaxParamStrLen); break;
 		case kMid	:	vst_strncpy (label, "dB", kVstMaxParamStrLen); break;
 		case kTreb	:	vst_strncpy (label, "dB", kVstMaxParamStrLen); break;
+		case kGain	:	vst_strncpy (label, "dB", kVstMaxParamStrLen); break;
 	}
 }
 
@@ -142,7 +155,7 @@ void Equalizer::setBass(float a) {
 	iBass = a;
 	uBass = exp((iBass-0.5)*2.764);
 	oBass = uBass;
-	uBass = uBass * uBass;
+	uBass = uBass;
 }
 //------------------------------------------------------------------------
 void Equalizer::setMid(float a) {
@@ -157,71 +170,79 @@ void Equalizer::setTreb(float a) {
 	oTreb = uTreb;
 }
 //-----------------------------------------------------------------------------------------
+void Equalizer::setGain(float a){
+	iGain = a;
+	uGain = exp((iGain-0.5)*2.764);
+	oGain = uGain;
+}
+//-----------------------------------------------------------------------------------------
+
 VstInt32 Equalizer::getVendorVersion ()
 { 
-	return 700; 
+	return 1000; 
 }
 //-----------------------------------------------------------------------------------------
 void Equalizer::equalize(float *signal) {
-	float mul1 = 1, mul2 = 1, mul3 = 1;
+	float mul = 1;	//hlavny multiplikator
+	float actFreq;
+	float mul_pom = 1;	//pomocny mmultiplikator
+	double dy = 1;		//smernica y
+	double dx = 1;		//smernica x
 
-	for (int i=0; i<fft_size; i++) {
-		/*if (i*freqPerBin < freqBass) {
-			mul += uBass * (freqPerBin*i / freqBass);
+	
+	for (int i=0; i<fftSize; i++) {
+		actFreq = i*freqPerBin;	//aktualna frekvencia
+		
+		//nedobra verzia
+		/*if (actFreq<300) {	//bass
+			if (actFreq<freqBass) {
+				mul_pom = ( (1.2*actFreq) / freqBass) - 0.2;
+			}
+			else {
+				mul_pom = ( (-actFreq * 0.5) / freqBass ) + 1.5;
+			}
+			mul = pow(uBass, mul_pom);
 		}
-		else {
-			mul *= uBass * (freqBass / (freqPerBin*i));
+		else if (actFreq<3000) {	//middle
+			if (actFreq<freqMid) {
+				mul_pom = ( (1.45*actFreq) / freqMid) - 0.45;
+			}
+			else {
+				mul_pom = ( (-actFreq * 0.5) / freqMid ) + 1.5;
+			}
+			mul = pow(uMid, mul_pom);
 		}
-		if (i*freqPerBin < freqMid) {
-			mul *= uMid * (freqPerBin*i / freqMid);
+		else {	//treble
+			if (actFreq<freqTreb) {
+				mul_pom = ( (1.45*actFreq) / freqTreb) - 0.45;
+			}
+			else {
+				mul_pom = ( (-actFreq) / freqTreb ) + 2;
+			}
+			mul = 4; //pow(uTreb, mul_pom);
 		}
-		else {
-			mul *= uMid * (freqMid / (freqPerBin*i));
-		}
-		if (i*freqPerBin < freqTreb) {
-			mul *= uTreb * (freqPerBin*i / freqTreb);
-		}
-		else {
-			mul *= uTreb * (freqTreb / (freqPerBin*i));
-		}*/
+		*/
 
-		double mul_pom;
-		if (i*freqPerBin < freqBass) {
-			mul_pom = (freqPerBin*i / freqBass) * 1.5;
+		if (actFreq<freqBass) {	//20..100
+			mul = pow(uBass, (actFreq/freqBass));
 		}
-		else {
-			mul_pom = freqBass / (freqPerBin*i) * 1.5;
+		else if (actFreq<freqMid) {	//100..1k
+			dy = uMid - uBass;
+			dx = freqMid - freqBass;
+			mul = uBass + ( (actFreq-freqBass)*(dy/dx) );
+		}	
+		else if (actFreq<freqTreb) { //1k..10k
+			dy = uTreb - uMid;
+			dx = freqTreb - freqMid;
+			mul = uMid + ( (actFreq-freqMid)*(dy/dx) );
+		}
+		else {	//10k..20k
+			mul = pow(uTreb, (freqTreb/actFreq) );
 		}
 		
-		if (uBass==1) {
-			mul1 = 1;
-		}
-		else if (uBass>=1) {
-			mul1 = 1 + ((uBass-1) * mul_pom);
-		}
-		else {
-			mul1 = 1 - (uBass * mul_pom);
-		}
-
-		/*if (i*freqPerBin < freqMid) {
-			mul2 = uMid * (freqPerBin*i / freqMid);
-		}
-		else {
-			mul2 = uMid * (freqMid / (freqPerBin*i));
-		}
-
-		if (i*freqPerBin < freqTreb) {
-			mul3 = uTreb * (freqPerBin*i / freqTreb);
-		}
-		else {
-			mul3 = uTreb * (freqTreb / (freqPerBin*i));
-		}*/
+		signal[2*i] *= mul;
+		signal[2*i + 1] *= mul;
 		
-		//float pom = (abs(mul2 - mul3)/2) + min(mul1, mul3); //stred medzi bass a treble
-		//signal[2*i] *= mul1 * mul2 * mul3;
-		//signal[2*i + 1] *= mul1 * mul2 * mul3;
-		signal[2*i] *= mul1;
-		signal[2*i + 1] *= mul1;
 	}
 }
 // -----------------------------------------------------------------------------------------------------------------
@@ -283,37 +304,52 @@ void Equalizer::Fft(float *fftBuffer, long fftFrameSize, long sign)
 void Equalizer::processReplacing (float** inputs, float** outputs, VstInt32 sampleFrames)
 {
     float* in1  =  inputs[0];
-   // float* in2  =  inputs[1];
+    float* in2  =  inputs[1];
     float* out1 = outputs[0];
-   // float* out2 = outputs[1];
+    float* out2 = outputs[1];
 		
 	while (--sampleFrames >= 0) {
 		
 		float x = *in1++;
+		float x2 = *in2++;
 
-		if (counter<fft_size) {
+		if (counter<fftSize) {
 			signal_in[counter] = x;
+			signal_in2[counter] = x2;
 		}
 		else {
 			
-			for (int i=0; i<fft_size; i++) {
+			//left
+			for (int i=0; i<fftSize; i++) {
 				signal_fft[2*i] = signal_in[i];
-				signal_fft[2*i+1] = 0;
+				signal_fft[(2*i)+1] = 0;
 			}
-			Fft(signal_fft, fft_size, -1);
-			
+			Fft(signal_fft, fftSize, -1);
 			equalize(signal_fft);
-
-			Fft(signal_fft, fft_size, 1);
-			
-			for (int i=0; i < fft_size; i++) {
-				signal_out[i] = signal_fft[2*i]/fft_size;
+			Fft(signal_fft, fftSize, 1);
+			for (int i=0; i<fftSize; i++) {
+				signal_out[i] = signal_fft[2*i] / fftSize;
 			}
 
+			//right
+			for (int i=0; i<fftSize; i++) {
+				signal_fft[2*i] = signal_in2[i];
+				signal_fft[(2*i)+1] = 0;
+			}
+			Fft(signal_fft, fftSize, -1);
+			equalize(signal_fft);
+			Fft(signal_fft, fftSize, 1);
+			for (int i=0; i<fftSize; i++) {
+				signal_out2[i] = signal_fft[2*i] / fftSize;
+			}
+				
 			counter = 0;
-			signal_in[counter] = x;	
+			signal_in[counter] = x;
+			signal_in2[counter] = x2;
 		}
-		(*out1++) = signal_out[counter++];
+		(*out1++) = signal_out[counter] * uGain;
+		(*out2++) = signal_out2[counter] * uGain;
+		counter++;
 	}
 }
 

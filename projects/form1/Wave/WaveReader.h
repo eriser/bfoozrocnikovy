@@ -21,6 +21,7 @@ private:
 	long samples_length;		//pocet samplev na jeden kanal
 	BinaryReader ^ input;		//input file
 	long int max_value;			//maximalna hodnota samplu podla bitovej hlbky
+	String ^ name;
 	
 	
 

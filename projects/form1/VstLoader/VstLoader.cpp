@@ -69,3 +69,37 @@ VstIntPtr VSTCALLBACK VstLoader::HostCallback (AEffect* effect, VstInt32 opcode,
 
 	return result;
 }
+
+int VstLoader::getNumParams(){
+	return effect->numParams;
+}
+
+string VstLoader::getParamName(int i) {
+	char name[256] = {0};
+	effect->dispatcher (effect, effGetParamName, i, 0, name, 0);
+	return string(name);
+}
+
+float VstLoader::getParam(int i){
+	return effect->getParameter(effect, i);
+}
+
+const char * VstLoader::getUniqueID() {
+	char * pole = new char[4];
+	int id = effect->uniqueID;
+	pole[0] = id         >> 24;
+	pole[1] = (id << 8 ) >> 24;
+	pole[2] = (id << 16) >> 24;
+	pole[3] = (id << 24) >> 24;
+	return (const char *)pole;
+}
+
+const char * VstLoader::getFxVersion(){
+	int id = effect->version;
+	char * pole = new char[4];
+	pole[0] = id         >> 24;
+	pole[1] = (id << 8 ) >> 24;
+	pole[2] = (id << 16) >> 24;
+	pole[3] = (id << 24) >> 24;
+	return (const char *)pole;
+}

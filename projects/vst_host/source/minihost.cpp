@@ -13,11 +13,12 @@
 //edit by bfooz
 
 #include "libraries/interfaces/aeffectx.h"
-//#include "libraries/wave/Wave.h"
+#include "libraries/wave/Wave.h"
 
 #include <windows.h>
 #include <stdio.h>
 #include <cmath>
+#include <string>
 
 //-------------------------------------------------------------------------------------------------------
 static const VstInt32 kBlockSize = 512;
@@ -142,7 +143,7 @@ int main (int argc, char* argv[])
 
 	printf("bFooz\n");
 	
-	string name("laguna19M_FX.wav");
+	std::string name("laguna19M_FX.wav");
 	printf("bfooz: opening %s\n", name.c_str());
 	WaveReader s_in(name.c_str());
 	int DataLength = s_in.getDataLength();

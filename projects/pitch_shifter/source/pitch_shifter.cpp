@@ -1,5 +1,7 @@
 #include "pitch_shifter.h"
 #include <cmath>
+#include "float.h"
+#include <fstream>
 
 
 using namespace std;
@@ -14,8 +16,8 @@ Pitch_shifter::Pitch_shifter (audioMasterCallback audioMaster)
 : AudioEffectX (audioMaster, 1, kNumParams)	// 1 program, 1 parameter only
 {
 	
-	setNumInputs (1);		// stereo in
-	setNumOutputs (1);		// stereo out
+	setNumInputs (2);		// stereo in
+	setNumOutputs (2);		// stereo out
 	setUniqueID ('Ptch');	// identify
 	canProcessReplacing ();	// supports replacing output
 	//canDoubleReplacing ();	// supports double precision processing
@@ -28,40 +30,59 @@ Pitch_shifter::Pitch_shifter (audioMasterCallback audioMaster)
 	sr = getSampleRate();
 	counter = 0;
 	counter2 = 0;
-	fft_size = 2048;
-	fft_size2 = 2*fft_size;
-	oversamp = 4; //>0
-	phase_expect = 2*pi/oversamp;
 
-	signal_in = new float[fft_size];
-	signal_fft = new float[fft_size2];
-	signal_out = new float[fft_size2];
-	phase_old = new float[fft_size/2+1];
-	phase_sum = new float[fft_size/2+1];
-	magn_in = new float[fft_size];
-	freq_in = new float[fft_size];
-	magn_out = new float[fft_size];
-	freq_out = new float[fft_size];
-	memset(signal_in, 0, fft_size * sizeof(float));
-	memset(signal_out, 0, fft_size2 * sizeof(float));
-	memset(signal_fft, 0, fft_size2 * sizeof(float));
-	memset(phase_old, 0, (fft_size/2+1) * sizeof(float));
-	memset(phase_sum, 0, (fft_size/2+1) * sizeof(float));
-	memset(magn_in, 0, fft_size * sizeof(float));
-	memset(freq_in, 0, fft_size * sizeof(float));
+	uFftSize		=	1024;
+	uFftSize2		=	uFftSize / 2;
+	uOverSamp		=	4;
+	FftSizeMax		=	uFftSize;
+	FftSizeMax2		=	uFftSize;
+	uFftSize_os14	=	(long) ((double)uFftSize/uOverSamp);		//o kolko samplov sa posunie iteracia fft
+	uFftSize_os34	=	(long) (uFftSize - uFftSize_os14);		//kolko samplov sa prekryva v dvoch za sebou nasledujucich iteraciach fft, vzhladom na uOverSamp.
+	
+	phase_expect = 2*pi/uOverSamp;
+
+	//log file
+	ofstream outf("C:/pitch_shift_log.txt");
+	outf << "FftSize:" << uFftSize << endl;
+	outf << "oversamp:" << uOverSamp << endl;
+	outf.close();
+	
+
+	signal_in = new float[FftSizeMax];
+	signal_in2 = new float[FftSizeMax];
+	signal_fft = new float[FftSizeMax*2];
+	signal_out = new float[FftSizeMax];
+	signal_out2 = new float[FftSizeMax];
+	phase_old = new float[FftSizeMax2+1];
+	phase_sum = new float[FftSizeMax2+1];
+	magn_in = new float[FftSizeMax];
+	freq_in = new float[FftSizeMax];
+	magn_out = new float[FftSizeMax];
+	freq_out = new float[FftSizeMax];
+	memset(signal_in, 0, FftSizeMax * sizeof(float));
+	memset(signal_in2, 0, FftSizeMax * sizeof(float));
+	memset(signal_out, 0, FftSizeMax * sizeof(float));
+	memset(signal_out2, 0, FftSizeMax * sizeof(float));
+	memset(signal_fft, 0, FftSizeMax * 2 * sizeof(float));
+	memset(phase_old, 0, (FftSizeMax/2+1) * sizeof(float));
+	memset(phase_sum, 0, (FftSizeMax/2+1) * sizeof(float));
+	memset(magn_in, 0, FftSizeMax * sizeof(float));
+	memset(freq_in, 0, FftSizeMax * sizeof(float));
 }
 
 //-------------------------------------------------------------------------------------------------------
 Pitch_shifter::~Pitch_shifter ()
 {
-	delete signal_in;
-	delete signal_out;
-	delete signal_fft;
-	delete phase_old;
-	delete magn_in;
-	delete freq_in;
-	delete magn_out;
-	delete freq_out;
+	delete [] signal_in;
+	delete [] signal_in2;
+	delete [] signal_out;
+	delete [] signal_out2;
+	delete [] signal_fft;
+	delete [] phase_old;
+	delete [] magn_in;
+	delete [] freq_in;
+	delete [] magn_out;
+	delete [] freq_out;
 }
 
 //-------------------------------------------------------------------------------------------------------
@@ -80,7 +101,7 @@ void Pitch_shifter::getProgramName (char* name)
 void Pitch_shifter::setParameter (VstInt32 index, float value)
 {
 	switch (index) {
-		case kShift : setShift(value); break;
+		case kShift		:	setShift(value);		break;
 	}
 }
 
@@ -89,7 +110,8 @@ float Pitch_shifter::getParameter (VstInt32 index)
 {
 	float vystup = 0;
 	switch (index) {
-		case kShift : vystup = iShift; break;
+		case kShift		:	vystup = iShift; break;
+		
 	}
 	return vystup;
 }
@@ -148,22 +170,25 @@ void Pitch_shifter::setShift(float a) {
 //-----------------------------------------------------------------------------------------
 VstInt32 Pitch_shifter::getVendorVersion ()
 { 
-	return 700; 
+	return 1000; 
 }
 //-----------------------------------------------------------------------------------------
-void Pitch_shifter::array_shift(float pole[]) { //posunie pole do lava o fft_size/oversamp
-	for (int i=0; i<(int)(fft_size-(fft_size/oversamp)); i++) {
-		pole[i] = pole[i+(int)(fft_size/oversamp)];
+void Pitch_shifter::array_shift(float* pole, long length) { //posunie pole do lava o length/uOverSamp
+	int i = 0;
+	long size_os = (long)((double)length/uOverSamp);
+	for (i=0; i<(length - size_os); i++) {
+		pole[i] = pole[i+size_os];
 	}
+	memset(pole + i, 0, size_os * sizeof(float));
 }
 //-----------------------------------------------------------------------------------------
 void Pitch_shifter::pitch_shift(float *magn_in, float *freq_in, float *magn_out, float *freq_out){ //samotny posun
-	memset(magn_out, 0, fft_size*sizeof(double));
-	memset(freq_out, 0, fft_size*sizeof(double));
-	int index;
-	for (int i = 0; i <(int)(fft_size/2); i++) { 
+	memset(magn_out, 0, FftSizeMax*sizeof(float));
+	memset(freq_out, 0, FftSizeMax*sizeof(float));
+	int index = 0;
+	for (int i = 0; i <= uFftSize2; i++) { 
 		index = (int)(i*uShift);
-		if (index <(int)(fft_size/2)) { 
+		if (index <= uFftSize2) { 
 			magn_out[index] += magn_in[i]; 
 			freq_out[index] = freq_in[i] * uShift; 
 		} 
@@ -175,22 +200,30 @@ void Pitch_shifter::analyse(float *signal_fft, float *magn_in, float *freq_in) {
 	float magn, phase, tmp;
 	long qpd;
 
-	for (int i=0; i<(int)(fft_size/2); i++) {
+	for (int i=0; i<=uFftSize2; i++) {
 		real = signal_fft[2*i];
 		imag = signal_fft[2*i + 1];
 		
 		magn = 2*sqrt(real*real + imag*imag);
 		phase = atan2(imag,real);
 		
+		/* rozdiel fazy */
 		tmp = phase - phase_old[i];
 		phase_old[i] = phase;
-		tmp -= i*phase_expect;
+
+		/* odcitat ocakavany fazovy rozdiel */
+		tmp -= (double)i*phase_expect;
+		
+		/* namapovat na +/- Pi interval */
 		qpd = tmp/pi;
 		if (qpd >= 0) qpd += qpd&1;
 		else qpd -= qpd&1;
 		tmp -= pi*qpd;
-		tmp = oversamp*tmp/(2*pi);
-		tmp = i*(sr/fft_size) + tmp*(sr/fft_size); //k-ta skutocna freqencia
+		
+		/* odchylka od bin frekvencie z +/- Pi intervalu */
+		tmp = uOverSamp*tmp/(2*pi);
+
+		tmp = i*(sr/uFftSize) + tmp*(sr/uFftSize); //k-ta skutocna freqencia
 		
 		//magnituda a skutocna frekvencia
 		magn_in[i] = magn;
@@ -202,14 +235,23 @@ void Pitch_shifter::synthese(float *magn_out, float *freq_out, float *signal_fft
 		
 		float magn, tmp, phase;
 			
-		for (int i=0; i <(int)(fft_size/2); i++) {
+		for (int i=0; i <= uFftSize2; i++) {
+			/* magnituda a skutocna frekvencia */
 			magn = magn_out[i];
 			tmp = freq_out[i];
+			
+			/* odcitat strednu frekvenciu bin-u */
+			tmp -= i*(sr/uFftSize);
 
-			tmp -= i*(sr/fft_size);
-			tmp /= sr/fft_size;
-			tmp = 2*pi*tmp/oversamp;
+			/* odchyllka bin-u */
+			tmp /= sr/uFftSize;
+
+			/* zapocitat uOverSampling */
+			tmp = 2*pi*tmp/uOverSamp;
+
 			tmp += i*phase_expect;
+
+			/* vypocitat fazu bin-u */
 			phase_sum[i] += tmp;
 			phase = phase_sum[i];
 
@@ -219,7 +261,7 @@ void Pitch_shifter::synthese(float *magn_out, float *freq_out, float *signal_fft
 		} 
 
 		//vynulovat zaporne frekvencie
-		for (int i = fft_size+2; i < 2*fft_size; i++) signal_fft[i] = 0;
+		for (int i = uFftSize+2; i < 2*uFftSize; i++) signal_fft[i] = 0;
 }
 // -----------------------------------------------------------------------------------------------------------------
 void Pitch_shifter::Fft(float *fftBuffer, long fftFrameSize, long sign)
@@ -280,50 +322,75 @@ void Pitch_shifter::Fft(float *fftBuffer, long fftFrameSize, long sign)
 void Pitch_shifter::processReplacing (float** inputs, float** outputs, VstInt32 sampleFrames)
 {
     float* in1  =  inputs[0];
-   // float* in2  =  inputs[1];
+	float* in2	=  inputs[1];
     float* out1 = outputs[0];
-   // float* out2 = outputs[1];
+	float* out2 = outputs[1];
 		
 	while (--sampleFrames >= 0) {
 		
 		float x = *in1++;
-
-		if (counter2<fft_size-fft_size/oversamp) {
-			signal_in[counter2++] = x;
+		float x2 = *in2++;
+	
+		if (counter2<uFftSize_os34) {	//nacitame prve sample
+			signal_in[counter2] = x;
+			signal_in2[counter2] = x2;
+			counter2++;
 		}
 		else {
-			if (counter2+counter<fft_size) {
+			if (counter2+counter<uFftSize) {
 				signal_in[counter2+counter] = x;
+				signal_in2[counter2+counter] = x2;
 			}
 			else {
-				for (int i=0; i<fft_size; i++) {
-					//double window = -0.5*cos(2*pi*i/fft_size)+0.5;
-					signal_fft[2*i] = signal_in[i];//* window;
+				
+				//left channel
+				for (int i=0; i<uFftSize; i++) {
+					double window = -0.5*cos(2*pi*i/uFftSize)+0.5;
+					signal_fft[2*i] = signal_in[i] * window;
 					signal_fft[2*i+1] = 0;
 				}
-				Fft(signal_fft, fft_size, -1);
-				
+				Fft(signal_fft, uFftSize, -1);
 				analyse(signal_fft, magn_in, freq_in);
-				
 				pitch_shift(magn_in, freq_in, magn_out, freq_out);
-				
-				synthese(magn_out, freq_out, signal_fft);
-				
-				Fft(signal_fft, fft_size, 1);
-				
-				array_shift(signal_out);
-				for (int i=0; i < fft_size; i++) {
-					//double window = -0.5*cos(2*pi*i/fft_size)+0.5;
-					//signal_out[i] += 2*window*signal_fft[2*i]/((fft_size/2)*oversamp);
-					signal_out[i] = signal_fft[2*i]/fft_size;
+				synthese(magn_out, freq_out, signal_fft);				
+				//synthese(magn_in, freq_in, signal_fft);
+				Fft(signal_fft, uFftSize, 1);				
+				array_shift(signal_out, uFftSize);
+				for (int i=0; i < uFftSize; i++) {
+					double window = -0.5*cos(2*pi*i/(double)uFftSize)+0.5;
+					signal_out[i] += 2*window*signal_fft[2*i]/((uFftSize2)*uOverSamp);
 				}
+				array_shift(signal_in, uFftSize);
+				signal_in[counter2] = x;
+				
+				
 
-				array_shift(signal_in);
-				counter = 1;
-				signal_in[counter2+counter] = x;
+				//right channel
+				for (int i=0; i<uFftSize; i++) {
+					double window = -0.5*cos(2*pi*i/uFftSize)+0.5;
+					signal_fft[2*i] = signal_in2[i] * window;
+					signal_fft[2*i+1] = 0;
+				}
+				Fft(signal_fft, uFftSize, -1);
+				analyse(signal_fft, magn_in, freq_in);
+				pitch_shift(magn_in, freq_in, magn_out, freq_out);
+				synthese(magn_out, freq_out, signal_fft);
+				Fft(signal_fft, uFftSize, 1);				
+				array_shift(signal_out2, uFftSize);
+				for (int i=0; i < uFftSize; i++) {
+					double window = -0.5*cos(2*pi*i/(double)uFftSize)+0.5;
+					signal_out2[i] += 2*window*signal_fft[2*i]/((uFftSize2)*uOverSamp);
+				}
+				array_shift(signal_in2, uFftSize);
+				signal_in2[counter2] = x2;
+				
+
+				counter = 0;				
 			}
 
-			(*out1++) = signal_out[counter++];
+			(*out1++) = signal_out[counter];
+			(*out2++) = signal_out2[counter];
+			counter++;
 		}
 
 	}

@@ -316,6 +316,18 @@
 				>
 			</File>
 		</Filter>
+		<Filter
+			Name="VstProgram"
+			>
+			<File
+				RelativePath=".\VstProgram\VstProgram.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\VstProgram\VstProgram.h"
+				>
+			</File>
+		</Filter>
 		<File
 			RelativePath=".\ReadMe.txt"
 			>

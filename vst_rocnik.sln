@@ -19,8 +19,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wav_loader", "projects\wav_
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vst_host", "projects\vst_host\vst_host.vcproj", "{6641413A-A7FB-439E-92D1-6057AB959208}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "form", "projects\form\form.vcproj", "{C350B6CE-B3BB-4309-9E1E-4D63D49298E9}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "form1", "projects\form1\form1.vcproj", "{41E0B616-5DB4-4671-A5AE-18F730929342}"
 EndProject
 Global
@@ -65,10 +63,6 @@ Global
 		{6641413A-A7FB-439E-92D1-6057AB959208}.Debug|Win32.Build.0 = Debug|Win32
 		{6641413A-A7FB-439E-92D1-6057AB959208}.Release|Win32.ActiveCfg = Release|Win32
 		{6641413A-A7FB-439E-92D1-6057AB959208}.Release|Win32.Build.0 = Release|Win32
-		{C350B6CE-B3BB-4309-9E1E-4D63D49298E9}.Debug|Win32.ActiveCfg = Debug|Win32
-		{C350B6CE-B3BB-4309-9E1E-4D63D49298E9}.Debug|Win32.Build.0 = Debug|Win32
-		{C350B6CE-B3BB-4309-9E1E-4D63D49298E9}.Release|Win32.ActiveCfg = Release|Win32
-		{C350B6CE-B3BB-4309-9E1E-4D63D49298E9}.Release|Win32.Build.0 = Release|Win32
 		{41E0B616-5DB4-4671-A5AE-18F730929342}.Debug|Win32.ActiveCfg = Debug|Win32
 		{41E0B616-5DB4-4671-A5AE-18F730929342}.Debug|Win32.Build.0 = Debug|Win32
 		{41E0B616-5DB4-4671-A5AE-18F730929342}.Release|Win32.ActiveCfg = Release|Win32

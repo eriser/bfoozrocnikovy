@@ -36,7 +36,13 @@ public:
 	VstLoader();
 	~VstLoader();
 	void loadEffect(wchar_t * name);
-	std::string message;
+	std::string message;		//stavova sprava
+	int getNumParams();			//vracia pocet parametrov
+	float getParam(int i);		//vracia hodnotu parametru i
+	std::string getParamName(int i);	//vracia meno parametru i
+	int getNumChan();			//vracia pocet kanalov efektu
+	const char * getUniqueID();	//vrati UniqID efektu
+	const char * getFxVersion();	//vracia verziu efektu
 
 private:
 	PluginLoader * loader;

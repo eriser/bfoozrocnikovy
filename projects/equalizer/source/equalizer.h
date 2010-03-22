@@ -11,6 +11,7 @@ enum {
 	kBass,
 	kMid,
 	kTreb,
+	kGain,
 	kNumParams
 };
 
@@ -41,20 +42,27 @@ public:
 	virtual VstInt32 getVendorVersion ();
 
 protected:
-	long fft_size;
+	//methods
 	void setBass(float a);
 	void setMid(float a);
 	void setTreb(float a);
+	void setGain(float a);
 	void Fft(float *fftBuffer, long fftFrameSize, long sign);
 	void equalize(float *signal);
+
+
+	//properties
+	long fftSize;
+	long fftSize2;
 
 	float sr, pi, freqPerBin;
 	char programName[kVstMaxProgNameLen + 1];
 	int counter;
 	
-	float *signal_in, *signal_out, *signal_fft;
+	float *signal_in, *signal_in2, *signal_out, *signal_out2, *signal_fft;
 
 	float iBass, iMid, iTreb, uBass, uMid, uTreb, oBass, oTreb, oMid;
+	float iGain, oGain, uGain;
 	float freqBass, freqMid, freqTreb;
 };
 
