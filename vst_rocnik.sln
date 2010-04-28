@@ -19,7 +19,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wav_loader", "projects\wav_
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vst_host", "projects\vst_host\vst_host.vcproj", "{6641413A-A7FB-439E-92D1-6057AB959208}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "form1", "projects\form1\form1.vcproj", "{41E0B616-5DB4-4671-A5AE-18F730929342}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ReSounder", "projects\reSounder\reSounder.vcproj", "{41E0B616-5DB4-4671-A5AE-18F730929342}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

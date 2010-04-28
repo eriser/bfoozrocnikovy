@@ -112,8 +112,7 @@ void DoubleDelay::getParameterDisplay (VstInt32 index, char *text)
 {
 	switch (index)
 	{
-		case kDelay :    int2string (delay, text, kVstMaxParamStrLen);			break;
-		case kWet :		 dB2string (fWet, text, kVstMaxParamStrLen);			break;
+		case kDelay :    int2string (delay, text, kVstMaxParamStrLen);			break;		case kWet :		 dB2string (fWet, text, kVstMaxParamStrLen);			break;
 		case kDry :      dB2string (fDry, text, kVstMaxParamStrLen);			break;
 	}
 }
@@ -164,6 +163,8 @@ void DoubleDelay::processReplacing (float** inputs, float** outputs, VstInt32 sa
 	float* out1 = outputs[0];
 	float* out2 = outputs[1];
 
+	long c_pom = 0;
+
 	while (--sampleFrames >= 0)
 	{
 		float x1 = *in1++;
@@ -177,6 +178,8 @@ void DoubleDelay::processReplacing (float** inputs, float** outputs, VstInt32 sa
 		if (cursor >= delay)
 			cursor = 0;
 		
+		c_pom++;
+
 		(*out1++) = fDry*x1 + fWet*y1;
 		(*out2++) = fDry*x2 + fWet*y2;
 	}
