@@ -30,6 +30,7 @@ namespace reSounder {
 		int numParams;			//pocet parametrof efektu
 		int maxParams;			//maximalny pocet paramterov efektu
 		int numSelectedParams;	//pocet vybratych parametrov
+		String^ homeDir;		//vchodzi adresar
 	private: System::Windows::Forms::GroupBox^  group_Params;
 
 
@@ -107,6 +108,7 @@ namespace reSounder {
 			numParams = 0;
 			maxParams = 9;
 			numSelectedParams = 0;
+			homeDir = Directory::GetCurrentDirectory();
 		}
 
 	protected:
@@ -217,9 +219,9 @@ namespace reSounder {
 			// 
 			this->b_Dry->Location = System::Drawing::Point(12, 12);
 			this->b_Dry->Name = L"b_Dry";
-			this->b_Dry->Size = System::Drawing::Size(85, 23);
+			this->b_Dry->Size = System::Drawing::Size(102, 23);
 			this->b_Dry->TabIndex = 0;
-			this->b_Dry->Text = L"Select Dry";
+			this->b_Dry->Text = L"Select Clean";
 			this->b_Dry->UseVisualStyleBackColor = true;
 			this->b_Dry->Click += gcnew System::EventHandler(this, &ReSounder::b_Dry_Click);
 			// 
@@ -227,9 +229,9 @@ namespace reSounder {
 			// 
 			this->b_Wet->Location = System::Drawing::Point(12, 41);
 			this->b_Wet->Name = L"b_Wet";
-			this->b_Wet->Size = System::Drawing::Size(85, 23);
+			this->b_Wet->Size = System::Drawing::Size(102, 23);
 			this->b_Wet->TabIndex = 1;
-			this->b_Wet->Text = L"Select Wet";
+			this->b_Wet->Text = L"Select Wanted";
 			this->b_Wet->UseVisualStyleBackColor = true;
 			this->b_Wet->Click += gcnew System::EventHandler(this, &ReSounder::b_Wet_Click);
 			// 
@@ -237,43 +239,46 @@ namespace reSounder {
 			// 
 			this->b_Effect->Location = System::Drawing::Point(12, 70);
 			this->b_Effect->Name = L"b_Effect";
-			this->b_Effect->Size = System::Drawing::Size(85, 23);
+			this->b_Effect->Size = System::Drawing::Size(102, 23);
 			this->b_Effect->TabIndex = 2;
 			this->b_Effect->Text = L"Select Effect";
 			this->b_Effect->UseVisualStyleBackColor = true;
+			this->b_Effect->Visible = false;
 			this->b_Effect->Click += gcnew System::EventHandler(this, &ReSounder::b_Effect_Click);
 			// 
 			// l_Dry
 			// 
 			this->l_Dry->AutoSize = true;
-			this->l_Dry->Location = System::Drawing::Point(103, 17);
+			this->l_Dry->Location = System::Drawing::Point(125, 17);
 			this->l_Dry->Name = L"l_Dry";
-			this->l_Dry->Size = System::Drawing::Size(26, 13);
+			this->l_Dry->Size = System::Drawing::Size(37, 13);
 			this->l_Dry->TabIndex = 3;
-			this->l_Dry->Text = L"Dry:";
+			this->l_Dry->Text = L"Clean:";
 			// 
 			// l_Wet
 			// 
 			this->l_Wet->AutoSize = true;
-			this->l_Wet->Location = System::Drawing::Point(103, 46);
+			this->l_Wet->Location = System::Drawing::Point(125, 46);
 			this->l_Wet->Name = L"l_Wet";
-			this->l_Wet->Size = System::Drawing::Size(27, 13);
+			this->l_Wet->Size = System::Drawing::Size(48, 13);
 			this->l_Wet->TabIndex = 4;
-			this->l_Wet->Text = L"Wet";
+			this->l_Wet->Text = L"Wanted:";
+			this->l_Wet->Click += gcnew System::EventHandler(this, &ReSounder::l_Wet_Click);
 			// 
 			// l_Effect
 			// 
 			this->l_Effect->AutoSize = true;
-			this->l_Effect->Location = System::Drawing::Point(103, 75);
+			this->l_Effect->Location = System::Drawing::Point(125, 75);
 			this->l_Effect->Name = L"l_Effect";
 			this->l_Effect->Size = System::Drawing::Size(38, 13);
 			this->l_Effect->TabIndex = 5;
 			this->l_Effect->Text = L"Effect:";
+			this->l_Effect->Visible = false;
 			// 
 			// l_DryFile
 			// 
 			this->l_DryFile->AutoSize = true;
-			this->l_DryFile->Location = System::Drawing::Point(147, 17);
+			this->l_DryFile->Location = System::Drawing::Point(179, 17);
 			this->l_DryFile->Name = L"l_DryFile";
 			this->l_DryFile->Size = System::Drawing::Size(63, 13);
 			this->l_DryFile->TabIndex = 6;
@@ -282,7 +287,7 @@ namespace reSounder {
 			// l_WetFile
 			// 
 			this->l_WetFile->AutoSize = true;
-			this->l_WetFile->Location = System::Drawing::Point(147, 46);
+			this->l_WetFile->Location = System::Drawing::Point(179, 46);
 			this->l_WetFile->Name = L"l_WetFile";
 			this->l_WetFile->Size = System::Drawing::Size(63, 13);
 			this->l_WetFile->TabIndex = 7;
@@ -291,22 +296,25 @@ namespace reSounder {
 			// l_EffectFile
 			// 
 			this->l_EffectFile->AutoSize = true;
-			this->l_EffectFile->Location = System::Drawing::Point(147, 75);
+			this->l_EffectFile->Location = System::Drawing::Point(179, 75);
 			this->l_EffectFile->Name = L"l_EffectFile";
 			this->l_EffectFile->Size = System::Drawing::Size(63, 13);
 			this->l_EffectFile->TabIndex = 8;
 			this->l_EffectFile->Text = L"- select file -";
+			this->l_EffectFile->Visible = false;
 			// 
 			// combo_Type
 			// 
+			this->combo_Type->Cursor = System::Windows::Forms::Cursors::Default;
 			this->combo_Type->FormattingEnabled = true;
-			this->combo_Type->Items->AddRange(gcnew cli::array< System::Object^  >(8) {L"general", L"single", L"delay", L"equalizer", 
-				L"limiter", L"compressor", L"flanger", L"tremolo"});
+			this->combo_Type->Items->AddRange(gcnew cli::array< System::Object^  >(7) {L"general", L"single", L"delay", L"equalizer", 
+				L"limiter", L"compressor", L"pitch shifter"});
 			this->combo_Type->Location = System::Drawing::Point(12, 100);
 			this->combo_Type->Name = L"combo_Type";
 			this->combo_Type->Size = System::Drawing::Size(121, 21);
 			this->combo_Type->TabIndex = 9;
 			this->combo_Type->Text = L"- select effect type -";
+			this->combo_Type->SelectedIndexChanged += gcnew System::EventHandler(this, &ReSounder::combo_Type_SelectedIndexChanged);
 			// 
 			// console
 			// 
@@ -333,7 +341,6 @@ namespace reSounder {
 			// 
 			// openFileDialog3
 			// 
-			this->openFileDialog3->FileName = L"d:\\Skola\\rocnikac\\solution\\projects\\reSounder\\doubledelay.dll";
 			this->openFileDialog3->Filter = L"dll files (*.dll)|*.dll|All files (*.*)|*.*";
 			// 
 			// group_Params
@@ -362,7 +369,7 @@ namespace reSounder {
 			// label3
 			// 
 			this->label3->AutoSize = true;
-			this->label3->Location = System::Drawing::Point(116, 20);
+			this->label3->Location = System::Drawing::Point(124, 20);
 			this->label3->Name = L"label3";
 			this->label3->Size = System::Drawing::Size(46, 13);
 			this->label3->TabIndex = 16;
@@ -371,7 +378,7 @@ namespace reSounder {
 			// label2
 			// 
 			this->label2->AutoSize = true;
-			this->label2->Location = System::Drawing::Point(90, 20);
+			this->label2->Location = System::Drawing::Point(99, 20);
 			this->label2->Name = L"label2";
 			this->label2->Size = System::Drawing::Size(22, 13);
 			this->label2->TabIndex = 15;
@@ -394,7 +401,7 @@ namespace reSounder {
 			this->table_Params->ColumnStyles->Add((gcnew System::Windows::Forms::ColumnStyle(System::Windows::Forms::SizeType::Absolute, 
 				25)));
 			this->table_Params->ColumnStyles->Add((gcnew System::Windows::Forms::ColumnStyle(System::Windows::Forms::SizeType::Absolute, 
-				60)));
+				46)));
 			this->table_Params->Controls->Add(this->panel_Name, 0, 0);
 			this->table_Params->Controls->Add(this->panel_Step, 2, 0);
 			this->table_Params->Controls->Add(this->panel_Vol, 1, 0);
@@ -418,7 +425,7 @@ namespace reSounder {
 			this->panel_Name->Controls->Add(this->checkBox1);
 			this->panel_Name->Location = System::Drawing::Point(4, 4);
 			this->panel_Name->Name = L"panel_Name";
-			this->panel_Name->Size = System::Drawing::Size(68, 237);
+			this->panel_Name->Size = System::Drawing::Size(82, 237);
 			this->panel_Name->TabIndex = 1;
 			// 
 			// checkBox9
@@ -558,10 +565,11 @@ namespace reSounder {
 			this->panel_Step->Controls->Add(this->textBox3);
 			this->panel_Step->Controls->Add(this->textBox2);
 			this->panel_Step->Controls->Add(this->textBox1);
-			this->panel_Step->Location = System::Drawing::Point(105, 4);
+			this->panel_Step->Location = System::Drawing::Point(119, 4);
 			this->panel_Step->Name = L"panel_Step";
 			this->panel_Step->Size = System::Drawing::Size(34, 237);
 			this->panel_Step->TabIndex = 2;
+			this->panel_Step->Visible = false;
 			// 
 			// textBox9
 			// 
@@ -664,10 +672,11 @@ namespace reSounder {
 			this->panel_Vol->Controls->Add(this->checkBox12);
 			this->panel_Vol->Controls->Add(this->checkBox11);
 			this->panel_Vol->Controls->Add(this->checkBox10);
-			this->panel_Vol->Location = System::Drawing::Point(79, 4);
+			this->panel_Vol->Location = System::Drawing::Point(93, 4);
 			this->panel_Vol->Name = L"panel_Vol";
 			this->panel_Vol->Size = System::Drawing::Size(19, 237);
 			this->panel_Vol->TabIndex = 0;
+			this->panel_Vol->Visible = false;
 			this->panel_Vol->Paint += gcnew System::Windows::Forms::PaintEventHandler(this, &ReSounder::panel1_Paint);
 			// 
 			// checkBox18
@@ -771,7 +780,7 @@ namespace reSounder {
 			// 
 			// b_Process
 			// 
-			this->b_Process->Location = System::Drawing::Point(437, 127);
+			this->b_Process->Location = System::Drawing::Point(198, 127);
 			this->b_Process->Name = L"b_Process";
 			this->b_Process->Size = System::Drawing::Size(130, 48);
 			this->b_Process->TabIndex = 12;
@@ -793,12 +802,13 @@ namespace reSounder {
 			// 
 			// b_Save
 			// 
-			this->b_Save->Location = System::Drawing::Point(573, 127);
+			this->b_Save->Location = System::Drawing::Point(334, 127);
 			this->b_Save->Name = L"b_Save";
 			this->b_Save->Size = System::Drawing::Size(130, 48);
 			this->b_Save->TabIndex = 14;
 			this->b_Save->Text = L"SAVE";
 			this->b_Save->UseVisualStyleBackColor = true;
+			this->b_Save->Visible = false;
 			this->b_Save->Click += gcnew System::EventHandler(this, &ReSounder::b_Save_Click);
 			// 
 			// check_Fast
@@ -806,12 +816,13 @@ namespace reSounder {
 			this->check_Fast->AutoSize = true;
 			this->check_Fast->Checked = true;
 			this->check_Fast->CheckState = System::Windows::Forms::CheckState::Checked;
-			this->check_Fast->Location = System::Drawing::Point(198, 127);
+			this->check_Fast->Location = System::Drawing::Point(139, 102);
 			this->check_Fast->Name = L"check_Fast";
 			this->check_Fast->Size = System::Drawing::Size(84, 17);
 			this->check_Fast->TabIndex = 15;
 			this->check_Fast->Text = L"Fast method";
 			this->check_Fast->UseVisualStyleBackColor = true;
+			this->check_Fast->Visible = false;
 			// 
 			// ReSounder
 			// 
@@ -908,14 +919,17 @@ private: System::Void b_Process_Click(System::Object^  sender, System::EventArgs
 			 bool sSizeOk = true;
 
 			 //skontrolujeme step sizes
-			 for (int i=0; i<numParams; i++) {
-				 sSize = Convert::ToSingle(panel_Step->Controls[i]->Text);
-				 if ( (sSize<=0 || sSize>100) && ((System::Windows::Forms::CheckBox^)panel_Name->Controls[i])->Checked ){
-					 //ak je step mimo rozsah a zaroven je dany parameter zvoleny
-					 sSizeOk = false;
-					 break;
+			 if (panel_Step->Visible == true) {
+				 for (int i=0; i<numParams; i++) {
+					 sSize = Convert::ToSingle(panel_Step->Controls[i]->Text);
+					 if ( (sSize<=0 || sSize>100) && ((System::Windows::Forms::CheckBox^)panel_Name->Controls[i])->Checked ){
+						 //ak je step mimo rozsah a zaroven je dany parameter zvoleny
+						 sSizeOk = false;
+						 break;
+					 }
 				 }
 			 }
+			
 
 			 if (host->getOk() && (combo_Type->SelectedIndex!=-1) && sSizeOk) {	//ak su zvolene vsetky parametre programu
 				 int* selectedParams = new int[numParams];
@@ -933,13 +947,25 @@ private: System::Void b_Process_Click(System::Object^  sender, System::EventArgs
 				 }
 
 				 //spustime process
-				 progressBar1->Value = 0;
-				 host->process(combo_Type->SelectedIndex, selectedParams, volType, stepSize, numSelectedParams, check_Fast->Checked, progressBar1);
+				 host->setProcessed(false);
+				 if (numSelectedParams>0) {
+					progressBar1->Value = 0;
+					host->process(combo_Type->SelectedIndex, selectedParams, volType, stepSize, numSelectedParams, check_Fast->Checked, progressBar1);
 				 
-				 console->AppendText(host->message + nl);
+					console->AppendText(host->message + nl);
+				 }
+				 else {
+					 console->AppendText("ERROR: no parameter selected" + nl);	
+				 }
 				 delete [] stepSize;
 				 delete [] volType;
 				 delete [] selectedParams;
+				 if (host->getProcessed()) {
+					 b_Save->Visible = true;
+				 }
+				 else {
+					 b_Save->Visible = false;
+				 }
 			 }
 			 else {
 				 console->AppendText(gcnew String("ERROR: some of program's parameters are invalid!") + nl);
@@ -968,6 +994,16 @@ private: void group_Params_redraw() {
 					 panel_Vol->Controls[i]->Enabled = false;
 					 panel_Step->Controls[i]->Enabled = false;
 				 }
+			 }
+		 }
+
+private: void paramsToProcess_reset() {
+			 for (int i=0; i<maxParams; i++) {
+				 ((System::Windows::Forms::CheckBox^)panel_Name->Controls[i])->Checked = true;
+				 ((System::Windows::Forms::CheckBox^)panel_Name->Controls[i])->Text = "";
+				 ((System::Windows::Forms::CheckBox^)panel_Vol->Controls[i])->Checked = false;
+				 panel_Step->Controls[i]->Text = "10";
+				 panel_Name->Controls[i]->Enabled = true;
 			 }
 		 }
 private: System::Void checkBox10_CheckedChanged(System::Object^  sender, System::EventArgs^  e) {
@@ -1016,6 +1052,107 @@ private: System::Void checkBox2_CheckedChanged(System::Object^  sender, System::
 		 }
 private: System::Void checkBox1_CheckedChanged(System::Object^  sender, System::EventArgs^  e) {
 			 group_Params_redraw();
+		 }
+private: System::Void combo_Type_SelectedIndexChanged(System::Object^  sender, System::EventArgs^  e) {
+			 paramsToProcess_reset();
+			 if (combo_Type->SelectedIndex == 0 || combo_Type->SelectedIndex==1) {
+				 //skryjeme vsetky checkboxy
+					for (int i=0; i<maxParams; i++) {
+						for (int j=0; j<3; j++) {
+							table_Params->Controls[j]->Controls[i]->Visible = false;
+						}
+					}
+					
+				 l_EffectFile->Text = "- select file -";				
+				 b_Effect->Visible = true;
+				 l_Effect->Visible = true;
+				 l_EffectFile->Visible = true;
+				 panel_Step->Visible = true;
+				 panel_Vol->Visible = true;
+
+				 
+			 }
+			 else {
+				 b_Effect->Visible = false;
+				 l_Effect->Visible = false;
+				 l_EffectFile->Visible = false;
+				 panel_Step->Visible = false;
+				 panel_Vol->Visible = false;
+
+				 String^ fileName;
+				 switch (combo_Type->SelectedIndex) {
+					 case 2 : fileName = gcnew String(homeDir + "\\doubledelay.dll"); break;
+					 case 3 : fileName = gcnew String(homeDir + "\\equalizer.dll"); break;
+					 case 4 : fileName = gcnew String(homeDir + "\\compressor.dll"); break;
+					 case 5 : fileName = gcnew String(homeDir + "\\compressor.dll"); break;
+					 case 6 : fileName = gcnew String(homeDir + "\\pitch_shifter.dll"); break;
+				 }
+
+				try {
+					host->openEffectFile(fileName);
+				}
+				catch (Exception ^ e) {
+					console->AppendText(e->Message + nl);
+				}
+				if (e->Empty) {
+					console->AppendText(host->message + nl);
+					
+					//zistime paramtere
+					numParams = host->getNumParams();
+					
+					if (numParams > maxParams) {
+						console->AppendText(gcnew String("ERROR: More than 9 parameters in effect!") + nl);
+					} 
+					else {
+									
+						//skryjeme vsetky checkboxy
+						for (int i=0; i<maxParams; i++) {
+							for (int j=0; j<3; j++) {
+								table_Params->Controls[j]->Controls[i]->Visible = false;
+							}
+						}
+						//ukazeme niektore checkboxy, pre limiter sfunkcnime iba treshold
+						for (int i=0; i<numParams; i++) {
+							table_Params->Controls[0]->Controls[i]->Text = host->getParamName(i);	//meno
+							for (int j=0; j<3; j++) {
+								table_Params->Controls[j]->Controls[i]->Visible = true;
+							}
+
+							if (combo_Type->SelectedIndex == 4) {	//ak mame zvoleny limiter
+								if (i!=5) {	//vsetko okrem treshold-u
+									table_Params->Controls[0]->Controls[i]->Enabled = false;	//znefunkcnenie
+									((System::Windows::Forms::CheckBox^)table_Params->Controls[0]->Controls[i])->Checked = false;	//odskrtnutie
+								}
+							}
+							
+						}
+
+					}
+				}
+
+			 }
+
+			 if (combo_Type->SelectedIndex==0 || combo_Type->SelectedIndex==1 || combo_Type->SelectedIndex==2 || combo_Type->SelectedIndex==6) {	//ak general, single, delay a pitch
+				 check_Fast->Visible = true;
+				 
+				 //resetneme velkost kroku
+				 //nastavime kroky
+				 for (int i=0; i<8; i++) {
+					 panel_Step->Controls[i]->Text = gcnew String("10");
+				 }
+				 if (combo_Type->SelectedIndex == 2) {	//ak zvoleny delayu
+					textBox9->Text = gcnew String("1");		//krok parametru delay nastavime na 1
+					checkBox17->Checked = true;				//volume type pre parameter wet
+					checkBox16->Checked = true;				//volume type pre parameter dry
+				 }
+				 
+			 }
+			 else {
+				 check_Fast->Visible = false;
+			 }
+
+		 }
+private: System::Void l_Wet_Click(System::Object^  sender, System::EventArgs^  e) {
 		 }
 };
 }

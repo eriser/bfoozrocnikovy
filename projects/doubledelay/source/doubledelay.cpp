@@ -112,7 +112,8 @@ void DoubleDelay::getParameterDisplay (VstInt32 index, char *text)
 {
 	switch (index)
 	{
-		case kDelay :    int2string (delay, text, kVstMaxParamStrLen);			break;		case kWet :		 dB2string (fWet, text, kVstMaxParamStrLen);			break;
+		case kDelay :    int2string ((int)((delay*1000.)/sr), text, kVstMaxParamStrLen);			break;		
+		case kWet :		 dB2string (fWet, text, kVstMaxParamStrLen);			break;
 		case kDry :      dB2string (fDry, text, kVstMaxParamStrLen);			break;
 	}
 }
@@ -122,7 +123,7 @@ void DoubleDelay::getParameterLabel (VstInt32 index, char *label)
 {
 	switch (index)
 	{
-		case kDelay :    strcpy (label, "samples");	break;
+		case kDelay :    strcpy (label, "ms");	break;
 		case kWet :		strcpy (label, "dB");	break;
 		case kDry :      strcpy (label, "dB");		break;
 	}

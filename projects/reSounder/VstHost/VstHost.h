@@ -14,8 +14,7 @@ enum {
 	tEq,
 	tLimiter,
 	tComp,
-	tFlanger,
-	tTremolo,
+	tPitchShift,
 };
 
 public ref class VstHost {
@@ -29,12 +28,14 @@ public:
 	void	openDryFile(System::String ^ name);	//otvori subor s dry zvuko
 	void	openWetFile(System::String ^ name);	//otvori subor s wet zvukom
 	void	openEffectFile(System::String ^ name);	//otvori efekt
+	//void	closeEffectFile();		//zatvori predtym otvoreny efektovy subor
 
 	//..informacne
 	int		getNumParams();							//vracia pocet parametrov efektu
 	String^ getParamName(int i);				//vracia mena parametru i
 	bool	getOk();								
-	bool	getProcessed();						//vracia hodnotu 'processsed'
+	bool	getProcessed();						//vracia hodnotu 'processed'
+	void	setProcessed(bool b);				//nasavi hodnotu 'processed'
 
 	//..vypoctove
 	void	process(int type, int* selectedParams, bool* volType, int* stepSize, int numSelectedParams, bool fast, System::Windows::Forms::ProgressBar^ progressBar);						
@@ -53,6 +54,7 @@ private:
 	void	processEq(int actParam, std::vector<float>* bestValues);
 	void	processLimiter(std::vector<float>* bestValues);
 	void	processComp(std::vector<float>* bestValues);
+	void	processPitch(std::vector<float>* bestValues);
 
 	//..pomocne
 	void	fillArray(WaveReader ^ reader, float * left, float * right);	//naplni floatove polia so samplami z reader
@@ -69,7 +71,7 @@ private:
 	float	getRatingRms(float* rms1, float* rms2, long length);	//porovnava hodnoty pola 'rms[]' s hodnotami vypocitaneho rms pole 'in[]'
 	long	calculateRms(float* in, long inLength, float* out);	//do out[] vypocita rms hodnoty vstupneho signalu, vracia dlzku out[]
 	long	calculateRms(float** in, long inLength, float* out);	//do out[] vypocita rms hodnoty vstupneho signalu, vracia dlzku out[]
-	float	getRatingFft(float* in1, float* in2, long length);	//vypocita rating pomocou FFT
+	float	getRatingFft(float* fftSignal1, float* fftSignal2, long length);	//vypocita rating frekvencych obrazov
 	void	processDelay_insert(std::vector<std::pair<float,float>>* params_best, float index, float value);	//v params_best najde majvacsiu hodnotu a ak je index mansi ako ona, nahradi
 	float	EX(std::vector<float>* v);			//spocita strednu hodnotu (priemer)
 	float	EX(float** in, long length);
@@ -111,10 +113,10 @@ private:
 	long		segmentLength;				//dlzka segmentov v procesovani
 	long		fftSize;					//velkost FFT
 	long		segmentNum;					//pocet segmentov, zavisi na segmentLength a dlzke signalu
-	long		fftSegmentNum;				//pocet segmentov pri vypocte fft (podla fftSize)
 	float*		segmentRmsEff;				//vypocitane RMS zo segmentu efektovaneho signalu
 	long		segmentRmsLength;			//dlzka jedneho segmentu RMS vysledku
 	bool		fastMethod;					//true == pouzije sa orezavanie
 	String^		nl;							//new line for String
+	float*		defaultParamValues;			//defaultne hodnoty parametrov
 };
 

@@ -41,11 +41,13 @@ Pitch_shifter::Pitch_shifter (audioMasterCallback audioMaster)
 	
 	phase_expect = 2*pi/uOverSamp;
 
+	/*
 	//log file
 	ofstream outf("C:/pitch_shift_log.txt");
 	outf << "FftSize:" << uFftSize << endl;
 	outf << "oversamp:" << uOverSamp << endl;
 	outf.close();
+	*/
 	
 
 	signal_in = new float[FftSizeMax];

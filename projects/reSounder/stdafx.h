@@ -3,5 +3,6 @@
 // are changed infrequently
 #pragma once
 #include "windows.h"
+#undef GetCurrentDirectory
 
 // TODO: reference additional headers your program requires here

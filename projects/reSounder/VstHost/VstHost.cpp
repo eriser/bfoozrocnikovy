@@ -21,6 +21,7 @@ VstHost::VstHost(){
 	rmsOverlap = 0;
 	segmentLength = rmsWindowSize;
 	nl = gcnew String(Environment::NewLine);
+	defaultParamValues = new float[9];
 }
 
 VstHost::~VstHost(){
@@ -29,22 +30,27 @@ VstHost::~VstHost(){
 	delete drySound;
 	delete wetSound;
 	delete loader;
+	delete defaultParamValues;
 }
 
 void VstHost::openDryFile(System::String ^name) {
 	drySound = gcnew WaveReader(name);
 	sampleRate = drySound->getSampleRate();
-	message = gcnew String("VstHost > dry file  '" + name + "'  loaded");
+	message = gcnew String("VstHost > clean file  '" + name + "'  loaded");
 	ok_dry = true;
 }
 
 void VstHost::openWetFile(System::String ^ name) {
 	wetSound = gcnew WaveReader(name);
-	message = gcnew String("VstHost > wet file  '" + name + "'  loaded");
+	message = gcnew String("VstHost > wanted file  '" + name + "'  loaded");
 	ok_wet = true;
 }
 
 void VstHost::openEffectFile(String ^ fileName) {
+	if (ok_effect) {
+		delete loader;
+		ok_effect = false;
+	}
 	loader = new VstLoader();
 	//konverzia z String na wchar_t* koli loadEffect(wchar_t*)
 	wchar_t* chars = reinterpret_cast<wchar_t*>((Runtime::InteropServices::Marshal::StringToHGlobalUni(fileName)).ToPointer());
@@ -55,6 +61,11 @@ void VstHost::openEffectFile(String ^ fileName) {
 	catch (exception e) {
 		message = gcnew String(string("VstHost > ").append(e.what()).c_str());
 		throw gcnew Exception(message);
+	}
+
+	//ulozime defaultne hodnoty parametrov
+	for (int i=0; i<loader->getNumParams(); i++) {
+		defaultParamValues[i] = loader->getParam(i);
 	}
 
 	message = gcnew String(string("VstHost > ").append(loader->message.c_str()).c_str());
@@ -150,51 +161,40 @@ void VstHost::process(int type, int* selectedParams, bool* volType, int* stepSiz
 
 	////------------- / RMS inicializacia
 
-	///--------------  FFT inicializacia
-			if (type==tEq) {
-				fftSegmentNum = dataLength / fftSize;	//pocet fft segmentov
-				fftSegmentWet = new float*[fftSegmentNum];		//ulozena FFT segmentov wet signalu
-				
-				//vypocitame FFT segmentov wet signalu
-				for (int segment=0; segment<segmentNum; segment++) {	//cez vsetky segmenty
-					fftSegmentWet[segment] = new float[2*fftSize];
-					memset(fftSegmentWet[segment], 0, 2 * fftSize * sizeof(float));
-					for (int i=0; i<fftSize; i++) {
-						fftSegmentWet[segment][2*i] = wet[0][segment*fftSize + i] + wet[1][segment*fftSize + i];	//nacitame wet signal do segmentu (left + right)
-					}
-					Fft(fftSegmentWet[segment], fftSize, -1);					//transformacia
-					//(*logFile) << EX(fftSegmentWet[segment], 2 * fftSize) << endl;
-				}
-				//(*logFile) << endl;
-			}
-	///---------------/ FFT inicializacia
 
+	//nastavime efektu vsetky parametre na defaultne hodnoty
+	{
+		int numParams = loader->getNumParams();
+		for (int i=0; i<numParams; i++) {
+			loader->setParam(i, defaultParamValues[i]);
+		}
+	}
 
 	//spustime process
 
 	vector<float>*	bestValues = new vector<float>();
-	message = gcnew String("vysledok:" + nl);
-
-	/*
-	loader->setParam(0,1);   
-	loader->setParam(1, 1);
-	loader->setParam(2, 1);
-	//loader->setParam(3, 1);
-	*/
-
+	message = gcnew String("result:" + nl);
 	switch(type) {
 		case tGeneral	:	processGeneral(numSelectedParams-1, bestValues); break;
 		case tSingle	:	processSingle(bestValues); break;
-		case tDelay		:	processDelay(bestValues); break;
+		case tDelay		:	processGeneral(numSelectedParams-1, bestValues); break;
 		case tEq		:	processEq(numSelectedParams-1, bestValues); break;
 		case tLimiter	:	processLimiter(bestValues); break;
 		case tComp		:	processComp(bestValues); break;
+		case tPitchShift:	processPitch(bestValues); break;
 	}
 	
 	progressBar->Value = 100;
 	
 
-	//nastavime efektu parametre na vysledne hodnoty
+	//nastavime efektu vsetky parametre na defaultne hodnoty
+	{
+		int numParams = loader->getNumParams();
+		for (int i=0; i<numParams; i++) {
+			loader->setParam(i, defaultParamValues[i]);
+		}
+	}
+	//nastavime efektu vybrane parametre na vysledne hodnoty
 	for (int i=0; i<bestValues->size(); i++) {
 		loader->setParam(selectedParams[i], (*bestValues)[i]);
 	}
@@ -220,20 +220,12 @@ void VstHost::process(int type, int* selectedParams, bool* volType, int* stepSiz
 		}
 		delete [] segmentRmsWet;
 	}
-	if (type==tEq) {
-		for (int i=0; i<fftSegmentNum; i++) {
-			delete [] fftSegmentWet[i];
-		}
-		delete [] fftSegmentWet;
-	}
 
-//	saveProgram();
 	//message = gcnew String("VstHost > process complete");
 	processed = true;
 }
 
 void VstHost::processEq(int actParam, vector<float>* bestValues) {
-	if (actParam!=-1) { //ak mame este nejaky parameter na spracovanie, inak koniec rekurzie
 
 		float fftSize2 = fftSize/2;
 		float PI  = 3.1415926536f;
@@ -241,6 +233,7 @@ void VstHost::processEq(int actParam, vector<float>* bestValues) {
 		int	bandsNum = 3;								//pocet pasiem
 		int bandsFreq [] = {100, 1000, 10000};			//frekvencie pasiem
 		float gain = 0.5;								//hodnota parametru gain
+		long fftSegmentNum = dataLength / fftSize;		//pocet fft segmentov
 
 		float* fftWet = new float[fftSize2];	//ulozena eq krivka wet signalu
 		float* fftDry = new float[fftSize2];	//ulozena eq krivka dry signalu
@@ -251,7 +244,8 @@ void VstHost::processEq(int actParam, vector<float>* bestValues) {
 		memset(fftDry, 0, (fftSize2) * sizeof(float));
 		memset(fftDiff, 0, (fftSize2) * sizeof(float));
 		memset(fftEff, 0, (fftSize2) * sizeof(float));
-		
+
+			
 		
 		
 //--- vypocet -----------------------------------------------------------------------------------------------------
@@ -283,8 +277,11 @@ void VstHost::processEq(int actParam, vector<float>* bestValues) {
 			for	(long i=0; i<fftSize2; i++) {	//cez cely dlzku segmentu
 				fftWet[i]+= sqrt(fftSegment[2*i]*fftSegment[2*i] + fftSegment[2*i+1]*fftSegment[2*i+1] );
 			}
+
+			progressBar->Value = (int)(100* ((float)segment/fftSegmentNum));
 		}
 
+		/*
 		//spocitame rozdiel wet - dry
 		subtract(fftWet, fftDry, fftSize2, fftDiff);
 
@@ -300,17 +297,12 @@ void VstHost::processEq(int actParam, vector<float>* bestValues) {
 		}
 		//zistime hodnotu gain
 		gain = fftWet[binSimilar] / fftDry[binSimilar];
-		//znormalizujeme fftWet podla tejto frekvencie
-		/*
-		for (long bin=0; bin<fftSize2; bin++) {
-			fftWet[bin]-=diff;
-		}
 		*/
-
+		
 		//zistime pomery v pasmach z bandsFreq
 		for (int i=0; i<numSelectedParams; i++) {
 			if (selectedParams[i]==3) {
-				bestValues->push_back(0.5);//(log(gain)/2)+0.5); //gain
+				bestValues->push_back(0.5); //gain
 			}
 			else {
 				int param = selectedParams[i];
@@ -354,12 +346,13 @@ void VstHost::processEq(int actParam, vector<float>* bestValues) {
 		delete [] pom2;
 		*/
 
+		
+
 		delete [] fftWet;
 		delete [] fftDry;
 		delete [] fftDiff;
 		delete [] fftEff;
 		delete [] fftSegment;
-	}
 
 }
 
@@ -380,6 +373,7 @@ void VstHost::processGeneral(int actParam, vector<float>* bestValues) {
 		float lastStepRating = 0;	//stepRating v predchadzajucom kroku
 		float last2StepRating = 0;	//stepRating v pred-predchadzajucom kroku
 		float bestValue = -1;		//najlepsia hodnota parametru
+		float lastValue = 0;		//value v predchadzajucej iteracii
 		float resultRating = float::MaxValue;	//vysledny rating
 		long stepCounter = 0;					//pocita, kolko krokov sme spravili
 		vector<float>* bestValuesStep = new vector<float>();	//bestValues aktualneho kroku
@@ -402,7 +396,7 @@ void VstHost::processGeneral(int actParam, vector<float>* bestValues) {
 
 			stepRating = 0;
 
-			for (int segment=0; segment<segmentNum; segment++) {	//cez (vsetky) segmenty
+			for (int segment=0; segment<segmentNum; segment+=2) {	//cez (vsetky) segmenty
 				
 					//nacitame aktualne spracovavany segment
 					for (int i = 0; i<segmentLength; i++) {
@@ -430,12 +424,13 @@ void VstHost::processGeneral(int actParam, vector<float>* bestValues) {
 				(*logFile) << stepRating << "\t" << value << "\t" << endl;
 			}
 
-			if (stepRating<resultRating) {	//ak sme nasli doteraz najlepsi rating
+			if (stepRating<resultRating && stepRating>0) {	//ak sme nasli doteraz najlepsi rating
 				resultRating = stepRating;
 				bestValuesResult->assign(bestValuesStep->begin(), bestValuesStep->end());	//pridame vector z rekurzie
 				bestValuesResult->push_back(value);			//pridame vypocitanu hodnotu
 			}
 
+			lastValue = value;
 			value+=((double)stepSize[actParam])/100;
 
 			//uprava progress baru, iba najvyssou urovnou rekurzie
@@ -446,7 +441,7 @@ void VstHost::processGeneral(int actParam, vector<float>* bestValues) {
 			//----- orezavanie
 			if (fastMethod) {	//ak je zvolena fast method
 				if (!volType[actParam]) { //ak nie je parameter volume-type
-					if ( (stepRating / lastStepRating) <= 0.4 ) { //ak je aktualny stepRating ovela mensi ako lastStepRating
+					if ( (stepRating) <= 0.6 * lastStepRating ) { //ak je aktualny stepRating ovela mensi ako lastStepRating
 						break;
 					}
 				}
@@ -514,13 +509,13 @@ void VstHost::processSingle(vector<float>* bestValues) {
 
 		(*logFile) << stepRating << "\t" << value << endl;
 
-		progressBar->Value = (int) (value*100);
+		progressBar->Value = (int)( ((float)step/stepIters)*100 );
 		value+=((double)stepSize[0])/100;
 
 		//----- orezavanie
 			if (fastMethod) {	//ak je zvolena fast method
 				if (!volType[0]) { //ak nie je parameter volume-type
-					if ( (stepRating / lastStepRating) <= 0.4 ) { //ak je aktualny stepRating ovela mensi ako lastStepRating
+					if ( (stepRating) <= 0.4 * lastStepRating) { //ak je aktualny stepRating ovela mensi ako lastStepRating
 						break;
 					}
 				}
@@ -534,7 +529,7 @@ void VstHost::processSingle(vector<float>* bestValues) {
 		lastStepRating = stepRating;
 	}
 
-	(*logFile) << "vysledok == " << resultValue << endl;
+	//(*logFile) << "vysledok == " << resultValue << endl;
 
 	bestValues->push_back(resultValue);
 
@@ -691,11 +686,14 @@ void VstHost::processLimiter(std::vector<float> *bestValues) {
 			treshSample = abs(dry[0][i]);
 		}
 	}
-	//spocitame treshold v dB
-	tresh = 20. * log10((double)treshSample);
 
-	String^ treshMessage = gcnew String("" + tresh + nl);
-	message = message->Insert(message->Length, treshMessage);
+	//zapiseme
+	bestValues->push_back(treshSample);
+	
+	//spocitame treshold v dB
+	//tresh = 20. * log10((double)treshSample);
+	//String^ treshMessage = gcnew String("" + tresh + nl);
+	//message = message->Insert(message->Length, treshMessage);
 
 	delete ratio;
 }
@@ -726,11 +724,17 @@ void VstHost::processComp(std::vector<float> *bestValues){
 	float tresh = 0;						//treshold
 	long maxAttack = sampleRate * 0.1;				//maximalny attack
 	int minAttack = sampleRate * 0.001;		//minimalny attack time == rms window size
+	long maxRelease = sampleRate * 0.5;		//maximalny release
 	vector<float>* attackTimes = new vector<float>();	//ulozene casy attacku
 	float attack = 0;						//vysledny attack
-	int sectionNum = 3;						//pocet vypoctovych "sekcii", koli progressBaru
+	float attackParam = 0;					//hodnota pre nastavenie parametru
+	float releaseParam = 0;					//hodnota pre nastavenie parametru
+	float release = 0;						//vysledny release
+	int sectionNum = 4;						//pocet vypoctovych "sekcii", koli progressBaru
 	float actSection = 0;					//aktualna sekcia
 	float compressRatio = float::MaxValue;				//vysledny kompresny pomer
+
+	float* params = new float[loader->getNumParams()];
 	
 
 	//--------------  vypocet
@@ -824,7 +828,7 @@ void VstHost::processComp(std::vector<float> *bestValues){
 	tresh = 0;
 	treshNum=0;
 	for (long i=1; i<rmsLength; i++) {
-		if (ratioRms[i-1]>(compressRatio + (1-compressRatio)/2 ) && ratioPeak[i]<=(compressRatio + (1-compressRatio)/2 ) && rmsDry[i-1]!=0) {
+		if (ratioRms[i-1]>(compressRatio + (1-compressRatio)/2 ) && ratioRms[i]<=(compressRatio + (1-compressRatio)/2 ) && rmsDry[i-1]!=0) {
 			//if (rmsDry[i]<tresh && rmsDry[i]>0) {
 				tresh+=rmsDry[i];
 				treshNum++;
@@ -843,7 +847,7 @@ void VstHost::processComp(std::vector<float> *bestValues){
 	//sekcia ATTACK TIME -------------------------------------------
 	actSection++;
 	pos = 0;
-	while (pos<rmsLength) {	//cez celu dlzku ratioPeak[]
+	while (pos<rmsLength) {	//cez celu dlzku ratioRms[]
 		
 		//najdeme zaciatok useku, ktory je komprimovany
 		while ( (ratioRms[pos]>0.96 || ratioRms[pos]==0) && pos<rmsLength) {
@@ -852,8 +856,8 @@ void VstHost::processComp(std::vector<float> *bestValues){
 		//najdeme attack time, v rozpati (pos-maxAttac, pos) najdeme prvu rms hodnotu s hodnotou vacsou a treshold
 		float maxSample = 0;	//hodnota hladaneho samplu
 		long  maxSamplePos = -1;	//pozicia hladaneho samplu v rmsDry[]
-		for (int reverse = pos; reverse>(int)(pos-(maxAttack/minAttack)); reverse--) {		//cez cele rozpatie, hladame v rmsDry, preto maxAttack/attack == pocet rms okien za dobu maxAttack
-			if (reverse<0 || ratioRms[reverse]>0.96 ) break;	//proti preteceniu alebo zasiahnutiu do predchadzajuceho skomprimovaneho useku
+		for (int reverse = pos-1; reverse>(int)(pos-(maxAttack/minAttack)); reverse--) {		//cez cele rozpatie, ideme spatne, hladame v rmsDry, preto maxAttack/attack == pocet rms okien za dobu maxAttack
+			if (reverse<0 || ratioRms[reverse]<=0.96 ) break;	//proti preteceniu alebo zasiahnutiu do predchadzajuceho skomprimovaneho useku
 			if (rmsDry[reverse]>tresh) {
 				maxSample = rmsDry[reverse];
 				maxSamplePos = reverse;
@@ -872,25 +876,121 @@ void VstHost::processComp(std::vector<float> *bestValues){
 	}
 	
 	attack = EX(attackTimes);
-	attack /= sampleRate;
+	attack /= sampleRate;	//attack v samploch
+	int attackMs = floor( (1000 * attack) + 0.5 );	//v milisekundach
+	
+	//najdeme hodnotu parametru z intervalu (0..1) pre najdeny attack v milisekundach
+	{
+		float lastDiff = float::MaxValue;	//velkost posledneho rozdielu
+		float actDiff = float::MaxValue;	//velkost aktualneho rozdielu
+		float lastDisp = 0;					//posledna zobrazovana hodnota
+		float value = 0;	//skutocna hodnota parametru
+		float disp;		//zobrazovana hodnota
+		while (value<=1){
+			loader->setParam(2, value);
+			disp = atof(loader->getParamDisplay(2).c_str());
+			actDiff = abs(attackMs-disp);
+			if (lastDiff < actDiff) {	//ak sa rozdiel zacal zvacsovat to znamena, ze sme uz hladanu hodnotu presli
+				attackParam = value-0.01;
+				break;
+			}
+			else {
+				lastDiff = actDiff;
+				value+=0.01;	//zvysime o 1 percento
+			}
+		}
+	}
 
+	//sekcia RELEASE TIME-----------------------------------------------------
+	attackTimes->clear();
+	actSection++;
+	pos = 0;
+	while (pos<rmsLength) {	//cez celu dlzku ratioRms[]
+		
+		//najdeme koniec useku, ktory je komprimovany
+		while ( (ratioRms[pos]<=0.96 || ratioRms[pos]==0) && pos<rmsLength) {
+			pos++;
+		}
+		//najdeme release time, v rozpati (pos-maxRelease, pos) najdeme prvu rms hodnotu s hodnotou vacsou ako treshold
+		long  searchedPos = -1;	//pozicia hladaneho samplu v rmsDry[]
+		for (int reverse = pos-1; reverse>(int)(pos-(maxRelease/minAttack)); reverse--) {		//cez cele rozpatie, ideme spatne, hladame v rmsDry, preto maxRelease/minAttack == pocet rms okien za dobu maxRelease
+			//hladame prvu hodnotu, ktora je vacsia ako treshold
+			if (reverse<0) break;	//proti preteceniu
+			if (rmsDry[reverse]>tresh) {
+				searchedPos = reverse;
+				break;
+			}
+		}
+		if (searchedPos!=-1) {	//ak sme nieco nasli
+			attackTimes->push_back((float)( minAttack * (pos-searchedPos) ));	//ulozime najdeny release time, hodnota v samploch; pouzivame vektor z predchadzajucej sekcie
+		}
 
+		//posunieme sa na zaciatok dalsieho komprimovaneho useku, tzn. na koniec aktualneho nekomprimovaneho useku
+		while ((ratioRms[pos]>0.96 || ratioRms[pos]==0) && pos<rmsLength) {
+			pos++;
+		}
+		pos++;
+		progressBar->Value = (int)( (100*((actSection-1)/sectionNum)) + ((100./sectionNum)*((float)pos/rmsLength)) );
+	}
+	
+	release = EX(attackTimes);
+	release /= sampleRate;
+	int releaseMs = floor( (1000 * release) + 0.5 );
+	//najdeme hodnotu parametru z intervalu (0..1) pre najdeny release v milisekundach
+	{
+		float lastDiff = float::MaxValue;	//velkost posledneho rozdielu
+		float actDiff = float::MaxValue;	//velkost aktualneho rozdielu
+		float lastDisp = 0;					//posledna zobrazovana hodnota
+		float value = 0;	//skutocna hodnota parametru
+		float disp;		//zobrazovana hodnota
+		while (value<=1){
+			loader->setParam(3, value);
+			disp = atof(loader->getParamDisplay(3).c_str());
+			actDiff = abs(releaseMs-disp);
+			if (lastDiff < actDiff) {	//ak sa rozdiel zacal zvacsovat to znamena, ze sme uz hladanu hodnotu presli
+				releaseParam = value-0.01;
+				break;
+			}
+			else {
+				lastDiff = actDiff;
+				value+=0.01;	//zvysime o 1 percento
+			}
+		}
+	}
 
+	//---- ZAPIS VYSLEDKOV ----------------------------------------------------------------------
 
-	int attackMs = floor( (1000 * attack) + 0.5 );
+	
+	/*
 	message = message->Insert(message->Length, gcnew String("attack: " + attackMs + " ms" + nl));
+	message = message->Insert(message->Length, gcnew String("release: " + releaseMs + " ms" + nl));
 	message = message->Insert(message->Length, gcnew String("ratio: " + compressRatio + "" + nl));
 	message = message->Insert(message->Length, gcnew String("treshold: " + treshdB + " dB" + nl));
+	*/
 	//zapis do logu
 	(*logFile) << "attack: " << (int)(attack*1000) << endl;
+	(*logFile) << "release: " << (int)(release*1000) << endl;
 	(*logFile) << "ratio: " << compressRatio << endl;
 	(*logFile) << "treshold: " << tresh << endl;
 	for (int i=0; i<peaksPrecision; i++) {
 		(*logFile) << peaksCalculated[i] << "\t" << peaks[i][0] << endl;
 	}
+
+	params[0] = 0.5;	//default input
+	params[1] = 0;		//kompresor, nie limiter
+	params[2] = attackParam;
+	params[3] = releaseParam;
+	params[4] = ((1/compressRatio) - 1 ) /9;	//inverzny vzorec z compressor.cpp
+	params[5] = tresh;
+	params[6] = 0;		//auto makeup off
+	params[7] = 0.5;	//default output
+
 	
+	for (int i=0; i<numSelectedParams; i++) {
+		bestValues->push_back(params[selectedParams[i]]);
+	}
 
-
+	//---  DELETOVANIE -------------------------------------------
 	for (int i=0; i<peaksPrecision; i++) {
 		delete [] peaks[i];
 	}
@@ -901,6 +1001,109 @@ void VstHost::processComp(std::vector<float> *bestValues){
 	delete [] rmsDry;
 	delete [] rmsWet;
 	delete attackTimes;
+	delete params;
+}
+
+void VstHost::processPitch(std::vector<float> *bestValues){
+	
+		float fftSize2 = fftSize/2;
+		int	  numStep = (100. /stepSize[0]) + 1;		//pocet iteracii ktorymi prejdeme vsetky hodnoty parametru
+		float value = 0;						//aktualna hodnota parametru
+		float resultValue = 0;					//vysledna hodnota parametru
+		float rating = 0;						//aktualny rating
+		float lastRating = 0;					//rating v predchazajucej interacii
+		float lastRating2 = 0;					//ratign v pred-predchadzajucej iteracii
+		float resultRating = float::MaxValue;	//vysledny rating
+		long fftSegmentNum = dataLength / fftSize;		//pocet fft segmentov
+
+		float** effected = new float*[2];		//bude ukladany zefektovany signal
+		for (int i=0; i<2; i++) {
+			effected[i] = new float[dataLength];
+		}
+		float* fftWet = new float[fftSize2];		//ulozena eq krivka wet signalu
+		float* fftEff = new float[fftSize2];		//ulozena eq krivka efektovaneho signalu
+		float* fftSegment = new float[2*fftSize];	//pouzivane pre ukladanie segmentu wet alebo dry signalu pre fft
+		memset(fftWet, 0, (fftSize2) * sizeof(float));
+		memset(fftEff, 0, (fftSize2) * sizeof(float));
+		
+
+		//--- VYPOCET -------------------------------------------------------------------------------
+
+		(*logFile) << "processPitch" << endl;
+
+		//zistime frekvencny obraz wet signalu
+		for (int segment=0; segment<fftSegmentNum-1; segment++) { //cez vsetky fft segmenty
+			memset(fftSegment, 0, 2 * fftSize * sizeof(float));
+			//nacitame wet segment
+			for (long i=0; i<fftSize; i++) {
+				fftSegment[2*i] = wet[0][segment*fftSize + i] + wet[1][segment*fftSize + i];	//left + right
+			}
+			//spocitame fft segmentu
+			Fft(fftSegment, fftSize, -1);
+			//zvysime fftWet o vypocitane hodnoty magnitudy
+			for	(long i=0; i<fftSize2; i++) {	//cez cely dlzku segmentu
+				fftWet[i]+= sqrt(fftSegment[2*i]*fftSegment[2*i] + fftSegment[2*i+1]*fftSegment[2*i+1] );
+			}
+		}
+
+		for	(int step = 0; step<numStep; step++) {	//cez vsetky hodnoty parametru
+			
+			loader->setParam(0, value);					//nastavime parameter
+
+			float x = loader->getParam(0);
+
+			loader->process(dry, effected, dataLength); //spracujeme
+
+			//zistime rekvencny obraz zefektovaneho signalu
+			memset(fftEff, 0, (fftSize2) * sizeof(float));
+			for (int segment=0; segment<fftSegmentNum-1; segment++) { //cez vsetky fft segmenty
+				memset(fftSegment, 0, 2 * fftSize * sizeof(float));
+				//nacitame eff segment
+				for (long i=0; i<fftSize; i++) {
+					fftSegment[2*i] = effected[0][segment*fftSize + i] + effected[1][segment*fftSize + i];	//left + right
+				}
+				//spocitame fft segmentu
+				Fft(fftSegment, fftSize, -1);
+				//zvysime fftEff o vypocitane hodnoty magnitudy
+				for	(long i=0; i<fftSize2; i++) {	//cez cely dlzku segmentu
+					fftEff[i]+= sqrt(fftSegment[2*i]*fftSegment[2*i] + fftSegment[2*i+1]*fftSegment[2*i+1] );
+					if (fftEff[0] > 1000) {
+						float x = fftEff[0];
+					}
+				}
+			}
+
+			//spocitame rating
+			rating = getRatingFft(fftWet, fftEff, fftSize2);	//porovname wet a zefektovany signal
+			if (rating<resultRating) {
+				resultRating = rating;
+				resultValue = value;
+			}
+
+			//zapis do log
+			(*logFile) << rating << "\t" << value << endl;
+
+			//-- orezavanie -----------------------------------------
+			if (fastMethod) {		//ak je zvolena fastMethod
+				if (lastRating2>lastRating  && lastRating<rating) {	//ak sme presli minimom v postupnosti ratingov
+					break;
+				}
+			}
+
+			lastRating2 = lastRating;
+			lastRating = rating;
+			value+=((double)stepSize[0])/100;
+			progressBar->Value = (int)(((float)step/numStep)*100);
+		}
+
+		bestValues->push_back(resultValue);
+
+
+		//---- DELETOVANIE -----------------------------------------------------------------
+		delete [] effected[0]; delete [] effected[1]; delete [] effected;
+		delete [] fftWet;
+		delete [] fftEff;
+		delete [] fftSegment;
 }
 
 /*
@@ -1061,6 +1264,10 @@ bool VstHost::getProcessed(){
 	return processed;
 }
 
+void VstHost::setProcessed(bool b) {
+	processed = b;
+}
+
 void VstHost::normalize (float** in, float** out, int length) {
 		float peak;
 		float mul;	//multiplikator
@@ -1148,9 +1355,6 @@ long VstHost::calculateRms(float* in, long inLength, float* out) {
 			rms+=in[i_in] * in[i_in];
 		}
 		out[i_out]=sqrt(rms/rmsWindowSize);	
-		if (out[i_out]>1) {
-			float x = out[i_out];
-		}
 	}
 
 	return i_out;
@@ -1223,29 +1427,19 @@ float VstHost::getRating(float** in1, float** in2, long length) {
 	return rating;
 }
 
-float VstHost::getRatingFft(float *buffer1, float *buffer2, long length) {
+float VstHost::getRatingFft(float* fftSignal1, float* fftSignal2, long length) {
 
-	float*  difference = new float[2*length];
-	float result = 0;
-	
+	float * subtracted = new float[length];
+	float difference = 0;
+
+	subtract(fftSignal1, fftSignal2, length, subtracted);
 	for (int i=0; i<length; i++) {
-			buffer1[2*i] = (buffer1[2*i]*buffer1[2*i] + buffer1[2*i+1]*buffer1[2*i+1]); //spocitame magnitudu
-			buffer2[2*i] = (buffer2[2*i]*buffer2[2*i] + buffer2[2*i+1]*buffer2[2*i+1]);
-			buffer1[2*i+1] = 0;
-			buffer2[2*i+1] = 0;
+		difference+=abs(subtracted[i]);
 	}
 
-	//subtract(buffer1, buffer2, 2*length, difference);
+	delete subtracted;	
 
-	/*for (int i=0; i<length; i++) {
-		result+=abs(difference[2*i]);
-	}*/
-
-	result = abs(EX(buffer1, length*2) - EX(buffer2, length*2) );
-
-	delete [] difference;
-
-	return result;
+	return difference;
 }
 
 void VstHost::abs(float *f, long length) {
