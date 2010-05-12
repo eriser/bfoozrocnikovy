@@ -1,7 +1,0 @@
-Cie¾om práce je vytvorenie systému uèiacich sa zvukovıch efektov, ktoré budú schopné na základe dvoch zvukovıch stôp (pôvodnej a zefektovanej) zrekonštruova konfiguráciu a nastavenie efektov, ktoré boli pouité na dosiahnute zefektovanej zvukovej stopy.
-
-Program bude postupne testova rôzne konfigurácie a nastavenia efektov, porovnáva priebeh aktuálne zefektovaného signálu so vstupnıch zefektovanım signálom a h¾ada èo najmenšiu odchılku.
-
-Budú pouívané vlastné efekty zhotovené na platforme VST.
-
-VST (Virtual Studio Technology) je interface vyvinutı firmou Steinberg a slúi na integráciu softvérovıch zvukovıch efektov a virtuálnych nástrojov.
