@@ -1,10 +1,11 @@
 ///\mainpage Dokumentacia programu ReSounder
-///Aplikacia ReSounder sluzi na najdenie nastaveni efektu podla pouzivatelom zadanych dvoch zvukovych suborov.
-///Prvy subor je originalny cisty zvuk pred aplikovanim efektu a druhy je hladany zvuko spracovani efektom.
-///Typicke pouzitie aplikacie je v pripade, ze pouzivatel potrebuje dosiahnut nastavenie efektu zhodne s nastavenim, 
-///ktore bolo pouzite pri vytvarani hladaneho zvuku, no sam nie je schopny toto nastavenie dosiahnut.
-///Koli samotnej praci s efektom je nutne paralelne pouzivat VST hostitelsku aplikaciu.
+///Aplikacia ReSounder sluzi na najdenie nastaveni efektu podla pouzivatelom zadanych dvoch zvukovych suborov.<br/>
+///Prvy subor je originalny cisty zvuk pred aplikovanim efektu a druhy je hladany zvuko spracovani efektom.<br/>
+///Typicke pouzitie aplikacie je v pripade, ze pouzivatel potrebuje dosiahnut nastavenie efektu zhodne s nastavenim,<br/>
+///ktore bolo pouzite pri vytvarani hladaneho zvuku, no sam nie je schopny toto nastavenie dosiahnut.<br/>
+///Koli samotnej praci s efektom je nutne paralelne pouzivat VST hostitelsku aplikaciu.<br/>
 ///autor : Branislav Fabry
+///\image html diagram.png
 
 #include "../Wave/Wave.h"
 #include "../VstLoader/VstLoader.h"
@@ -17,16 +18,15 @@
 
 //typ zvoleneho parametru
 enum {
-	tGeneral,
-	tSingle,
 	tDelay,
 	tEq,
 	tLimiter,
 	tComp,
 	tPitchShift,
+	tGeneral
 };
 
-///Hlavna trieda, ktora zabezpecuje vsetky vypocty.
+///Hlavna trieda, ktora zabezpecuje vsetky vypocty. (managed C++)
 public ref class VstHost {
 
 public:
@@ -41,32 +41,32 @@ public:
 	///\brief Otvori subor s wet (hladanym) zvukom
 	///\param name cesta k suboru
 	void	openWetFile(System::String ^ name);
-	///\brief Nacita subor s efektom.
+	///\brief Nacita dll subor VST efektu.
 	///\param name cesta k suboru
 	void	openEffectFile(System::String ^ name);	
 	//void	closeEffectFile();		//zatvori predtym otvoreny efektovy subor		
 
 	//..informacne
-	///Vracia pocet parametrov efektu
+	///Vracia pocet parametrov v nacitanom efekte
 	int		getNumParams();
-	///\brief Vracia nazov parametru i
+	///\brief Vracia nazov parametru i v nacitanom efekte
 	///\param i cislo parametru
 	String^ getParamName(int i);				
-	///true == nacitany dry, wet, efekt
+	///ak je true, tzn., ze je uspesne nacitany dry zvuk, wet zvuk aj efekt
 	bool	getOk();
-	///vracia hodnotu 'processed' == nastavenie parametrov najdene
+	///vracia hodnotu premennej 'processed', ktora urcuje, ci bol vypocet parametrov vykonany
 	bool	getProcessed();
-	///nastavi hodnotu 'processed'
+	///nastavi hodnotu 'processed', ktora urcuje, ci bol vypocet parametrov vykonany
 	void	setProcessed(bool b);				
 
 	//..vypoctove
 	///\brief Spusti vypocet
-	///\param type typ efektu
-	///\param selectedParams zvolene parametre
-	///\param volType ci je parameter vol-type, pre kazdy parameter
-	///\param stepSize velkost kroku, pre kazdy parameter
-	///\param numSelectedParams pocet zvolenych parametrov
-	///\param fast true==zvolena fast method
+	///\param type typ efektu, (0==delay, 1==equalizer, 2==limiter, 3==compressor, 4==pitch shifter, 5==general)
+	///\param selectedParams pouzivatelom zvolene parametre, pole dlzky numSelectedParams, v kazdom prvku je ulozene cislo zvoleneho parametru
+	///\param volType ci je parameter vol-type, pole velkosti poctu parametrov efektu, kazdy prvok reprezetuje jeden parameter
+	///\param stepSize velkost kroku v percentach, pole velkosti poctu parametrov, kazdy prvok reprezentuje jeden parameter
+	///\param numSelectedParams pocet pouzivatelom zvolenych parametrov
+	///\param fast ci je zvolena fast method, tzn. ci sa bude vykonavat orezavanie
 	///\param progressBar progress bar
 	void	process(int type, int* selectedParams, bool* volType, int* stepSize, int numSelectedParams, bool fast, System::Windows::Forms::ProgressBar^ progressBar); 				
 	///\brief Ulozi nastavenie do fxp suboru
@@ -82,7 +82,6 @@ private:
 	
 	//..hlavne
 	void	processGeneral(int actParams, std::vector<float>* bestValues);
-	void	processSingle(std::vector<float>* bestValues);
 	void	processEq(int actParam, std::vector<float>* bestValues);
 	void	processLimiter(std::vector<float>* bestValues);
 	void	processComp(std::vector<float>* bestValues);
@@ -104,7 +103,6 @@ private:
 	long	calculateRms(float* in, long inLength, float* out);	//do out[] vypocita rms hodnoty vstupneho signalu, vracia dlzku out[]
 	long	calculateRms(float** in, long inLength, float* out);	//do out[] vypocita rms hodnoty vstupneho signalu, vracia dlzku out[]
 	float	getRatingFft(float* fftSignal1, float* fftSignal2, long length);	//vypocita rating frekvencych obrazov
-	void	processDelay_insert(std::vector<std::pair<float,float>>* params_best, float index, float value);	//v params_best najde majvacsiu hodnotu a ak je index mansi ako ona, nahradi
 	float	EX(std::vector<float>* v);			//spocita strednu hodnotu (priemer)
 	float	EX(float** in, long length);
 	float	EX(float* in, long length);

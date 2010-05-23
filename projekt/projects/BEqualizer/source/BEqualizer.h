@@ -16,6 +16,9 @@ enum {
 };
 
 ///\brief Implementovany efekt equalizer ako VST efekt.
+///
+///Dokumentacia k metodam je uvedena v dokumentacii k VST SDK.
+
 class BEqualizer : public AudioEffectX
 {
 public:

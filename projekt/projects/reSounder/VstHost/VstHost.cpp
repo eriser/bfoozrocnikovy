@@ -177,13 +177,12 @@ void VstHost::process(int type, int* selectedParams, bool* volType, int* stepSiz
 	vector<float>*	bestValues = new vector<float>();
 	message = gcnew String("result:" + nl);
 	switch(type) {
-		case tGeneral	:	processGeneral(numSelectedParams-1, bestValues); break;
-		case tSingle	:	processSingle(bestValues); break;
 		case tDelay		:	processGeneral(numSelectedParams-1, bestValues); break;
 		case tEq		:	processEq(numSelectedParams-1, bestValues); break;
 		case tLimiter	:	processLimiter(bestValues); break;
 		case tComp		:	processComp(bestValues); break;
 		case tPitchShift:	processPitch(bestValues); break;
+		case tGeneral	:	processGeneral(numSelectedParams-1, bestValues); break;
 	}
 	
 	progressBar->Value = 100;
@@ -253,6 +252,8 @@ void VstHost::processEq(int actParam, vector<float>* bestValues) {
 //--- vypocet -----------------------------------------------------------------------------------------------------
 
 		for (int segment=0; segment<fftSegmentNum; segment++) { //cez vsetky fft segmenty
+
+			progressBar->Value = (int)(100* ((float)segment/fftSegmentNum));
 			
 			//------  dry signal
 			memset(fftSegment, 0, 2 * fftSize * sizeof(float));
@@ -280,7 +281,7 @@ void VstHost::processEq(int actParam, vector<float>* bestValues) {
 				fftWet[i]+= sqrt(fftSegment[2*i]*fftSegment[2*i] + fftSegment[2*i+1]*fftSegment[2*i+1] );
 			}
 
-			progressBar->Value = (int)(100* ((float)segment/fftSegmentNum));
+			
 		}
 
 		/*
@@ -475,74 +476,6 @@ void VstHost::processGeneral(int actParam, vector<float>* bestValues) {
 	}
 }
 
-void VstHost::processSingle(vector<float>* bestValues) {
-	
-	long stepIters = (long)(100 / stepSize[0]) + 1;	//pocet krokov v nastavovani parametru
-	float value = 0;			//aktualna hodnota parametru
-	float** effected = new float*[2];	//efektovany signal
-		effected[0] = new float[dataLength];
-		effected[1] = new float[dataLength];
-	long  rmsLength = 0;	//dlzka rms pola
-	float* rmsEff = new float[dataLength];
-	float* rmsWet = new float[dataLength];
-	float resultRating = float::MaxValue;	//min. (najlepsi) rating
-	float resultValue = float::MaxValue;	//vysledna hodnota parametru
-	float lastStepRating = 0;
-	float lastStepRating2 = 0;
-
-	if (volType[0]) {	//vypocitame rms wet signalu
-		rmsLength = calculateRms(wet, dataLength, rmsWet);
-	}
-
-	for (int step=0; step<stepIters; step++) {
-		float stepRating;	//rating aktualneho kroku
-		loader->setParam(selectedParams[0], value);
-		loader->process(dry, effected, dataLength);	//spracujeme signal
-			
-		if (!volType[0]) {		//aktualny parameter nie je volume type
-			stepRating = getRating(wet, effected, dataLength);
-		}
-		else {	//je volume type
-			calculateRms(effected, dataLength, rmsEff);	//spocitame rms effektovaneho signalu
-			stepRating = getRatingRms(rmsWet, rmsEff, rmsLength);	//spocitame rating
-		}
-
-		if (stepRating<resultRating) {
-			resultRating = stepRating;	
-			resultValue = value;
-		}
-
-		(*logFile) << stepRating << "\t" << value << endl;
-
-		progressBar->Value = (int)( ((float)step/stepIters)*100 );
-		value+=((float)stepSize[0])/100;
-
-		//----- orezavanie
-			if (fastMethod) {	//ak je zvolena fast method
-				if (!volType[0]) { //ak nie je parameter volume-type
-					if ( (stepRating) <= 0.4 * lastStepRating) { //ak je aktualny stepRating ovela mensi ako lastStepRating
-						break;
-					}
-				}
-				else {	//ak je parameter volume-type
-					if ( (lastStepRating2>lastStepRating) && (lastStepRating<stepRating) )
-						break;
-				}
-			}		
-		//----- /orezavanie
-		lastStepRating2 = lastStepRating;
-		lastStepRating = stepRating;
-	}
-
-	//(*logFile) << "vysledok == " << resultValue << endl;
-
-	bestValues->push_back(resultValue);
-
-	delete [] effected[0]; delete [] effected[1]; delete [] effected;
-	delete [] rmsEff;
-	delete [] rmsWet;
-}
-
 void VstHost::processLimiter(std::vector<float> *bestValues) {
 
 	float* ratio = new float[dataLength];
@@ -649,6 +582,7 @@ void VstHost::processComp(std::vector<float> *bestValues){
 	//pomocou RMS
 	pos = 0;
 	while ( (pos<rmsLength) && (peaksCalculatedSum < peaksCalculatedMax) ) {	//kym mame vstupne data alebo kym sme nenasli dostatok pomerov peakov
+		progressBar->Value = (int)( (100*((actSection-1)/sectionNum)) + ((100./sectionNum)*((float)pos/rmsLength)) );
 		inPeak = (int)(rmsDry[pos] * peaksPrecision);							//na ktorej pozicii v zozname 'peaks' sa nachadza aktualny vstupny peak
 		if (inPeak > 0) {
 			if (peaksCalculated[inPeak]<peakNum) {								//ak este nemam vypocitanych dost pomerov pre aktualnu velksot vstupneho peaku
@@ -657,7 +591,7 @@ void VstHost::processComp(std::vector<float> *bestValues){
 				peaksCalculatedSum++;											//zvysime celkovy pocet vypocitanych pomerov
 			}
 		}
-		progressBar->Value = (int)( (100*((actSection-1)/sectionNum)) + ((100./sectionNum)*((float)pos/rmsLength)) );
+		
 		pos++;
 	}
 	
@@ -903,6 +837,7 @@ void VstHost::processPitch(std::vector<float> *bestValues){
 
 		(*logFile) << "processPitch" << endl;
 
+
 		//zistime frekvencny obraz wet signalu
 		for (int segment=0; segment<fftSegmentNum-1; segment++) { //cez vsetky fft segmenty
 			memset(fftSegment, 0, 2 * fftSize * sizeof(float));
@@ -1081,25 +1016,6 @@ float VstHost::odch(vector<float>* v, float ex) {
 	o/=v->size();
 	return o;
 }
-
-
-void VstHost::processDelay_insert(vector<pair<float,float>>*	params_best, float index, float value) {
-	int max_position = 0;	//pozicia prvku s max. index-om v params_best
-
-	//najdeme kde je prvok s max indexom
-	for (int i=0; i<(int)params_best->size(); i++) {
-		if ((*params_best)[i].first > (*params_best)[max_position].first) {
-			max_position = i;
-		}
-	}
-
-	//skusime zapisat <index,value>
-	if ((*params_best)[max_position].first > index) {
-		(*params_best)[max_position].first = index;
-		(*params_best)[max_position].second = value;
-	}
-}
-
 
 void VstHost::saveProgram(String^ fileName) {
 	

@@ -26,19 +26,19 @@ struct fxProgram
 
 };
 
-///\brief Sluzi na ukladanie nastaveni do fxp suboru.
+///\brief Sluzi na ukladanie nastaveni do fxp suboru. (native C++)
 class VstProgramSaver {
 public:
 	//methods
 	VstProgramSaver();
-	///Konstruktor, ktory hned vytvara fxp subor.
+	///Konstruktor, ktory hned pri jeho volani vytvara fxp subor.
 	///\param fxID ID efektu
 	///\param fxVersion verzia efektu
 	///\param numParams pocet parametrov efektu
 	///\param fileName nazov fxp suboru, do ktoreho sa uklada
 	///\param name pomenovanie nastavenia
 	///\param nameLength dlzka name
-	///\param params samotne hodnoty parametrov
+	///\param params samotne hodnoty parametrov, pole s dlzkou numParams, hodnoty su z intervalu <0..1>
 	VstProgramSaver(const char * fxID, const char * fxVersion, int numParams, const char * fileName, const char * name, int nameLength, float* params);
 	~VstProgramSaver();
 	//properties

@@ -1,0 +1,8 @@
+digraph G
+{
+  edge [fontname="FreeSans",fontsize="10",labelfontname="FreeSans",labelfontsize="10"];
+  node [fontname="FreeSans",fontsize="10",shape=record];
+  Node1 [label="VstProgramSaver",height=0.2,width=0.4,color="black", fillcolor="grey75", style="filled" fontcolor="black"];
+  Node2 -> Node1 [dir=back,color="darkorchid3",fontsize="10",style="dashed",label="program",fontname="FreeSans"];
+  Node2 [label="fxProgram",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$structfx_program.html",tooltip="Struktura sluziaca na ukladanie zloziek fxp suboru (podla VST SDK)."];
+}

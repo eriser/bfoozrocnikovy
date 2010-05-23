@@ -14,12 +14,12 @@ namespace reSounder {
 	using namespace System::Data;
 	using namespace System::Drawing;
 
-	///\brief Trieda zabezpecujuca graficke rozhranie.
+	///\brief Trieda zabezpecujuca graficke rozhranie. (managed C++)
 	public ref class ReSounder : public System::Windows::Forms::Form
 	{
 	private:
 		VstHost ^ host;
-		int numParams;			//pocet parametrof efektu
+		int numParams;			//pocet parametrov efektu
 		int maxParams;			//maximalny pocet paramterov efektu
 		int numSelectedParams;	//pocet vybratych parametrov
 		String^ homeDir;		//vchodzi adresar
@@ -78,6 +78,11 @@ namespace reSounder {
 	private: System::Windows::Forms::Label^  label2;
 	private: System::Windows::Forms::Label^  label1;
 	private: System::Windows::Forms::CheckBox^  check_Fast;
+
+
+
+
+
 
 
 
@@ -293,8 +298,8 @@ namespace reSounder {
 			// 
 			this->combo_Type->Cursor = System::Windows::Forms::Cursors::Default;
 			this->combo_Type->FormattingEnabled = true;
-			this->combo_Type->Items->AddRange(gcnew cli::array< System::Object^  >(7) {L"general", L"single", L"delay", L"equalizer", 
-				L"limiter", L"compressor", L"pitch shifter"});
+			this->combo_Type->Items->AddRange(gcnew cli::array< System::Object^  >(6) {L"delay", L"equalizer", L"limiter", L"compressor", 
+				L"pitch shifter", L"general"});
 			this->combo_Type->Location = System::Drawing::Point(12, 100);
 			this->combo_Type->Name = L"combo_Type";
 			this->combo_Type->Size = System::Drawing::Size(121, 21);
@@ -387,7 +392,7 @@ namespace reSounder {
 			this->table_Params->ColumnStyles->Add((gcnew System::Windows::Forms::ColumnStyle(System::Windows::Forms::SizeType::Absolute, 
 				25)));
 			this->table_Params->ColumnStyles->Add((gcnew System::Windows::Forms::ColumnStyle(System::Windows::Forms::SizeType::Absolute, 
-				51)));
+				55)));
 			this->table_Params->Controls->Add(this->panel_Name, 0, 0);
 			this->table_Params->Controls->Add(this->panel_Step, 2, 0);
 			this->table_Params->Controls->Add(this->panel_Vol, 1, 0);
@@ -411,7 +416,7 @@ namespace reSounder {
 			this->panel_Name->Controls->Add(this->checkBox1);
 			this->panel_Name->Location = System::Drawing::Point(4, 4);
 			this->panel_Name->Name = L"panel_Name";
-			this->panel_Name->Size = System::Drawing::Size(77, 237);
+			this->panel_Name->Size = System::Drawing::Size(73, 237);
 			this->panel_Name->TabIndex = 1;
 			// 
 			// checkBox9
@@ -551,7 +556,7 @@ namespace reSounder {
 			this->panel_Step->Controls->Add(this->textBox3);
 			this->panel_Step->Controls->Add(this->textBox2);
 			this->panel_Step->Controls->Add(this->textBox1);
-			this->panel_Step->Location = System::Drawing::Point(114, 4);
+			this->panel_Step->Location = System::Drawing::Point(110, 4);
 			this->panel_Step->Name = L"panel_Step";
 			this->panel_Step->Size = System::Drawing::Size(34, 237);
 			this->panel_Step->TabIndex = 2;
@@ -658,7 +663,7 @@ namespace reSounder {
 			this->panel_Vol->Controls->Add(this->checkBox12);
 			this->panel_Vol->Controls->Add(this->checkBox11);
 			this->panel_Vol->Controls->Add(this->checkBox10);
-			this->panel_Vol->Location = System::Drawing::Point(88, 4);
+			this->panel_Vol->Location = System::Drawing::Point(84, 4);
 			this->panel_Vol->Name = L"panel_Vol";
 			this->panel_Vol->Size = System::Drawing::Size(19, 237);
 			this->panel_Vol->TabIndex = 0;
@@ -814,7 +819,7 @@ namespace reSounder {
 			// 
 			this->AutoScaleDimensions = System::Drawing::SizeF(6, 13);
 			this->AutoScaleMode = System::Windows::Forms::AutoScaleMode::Font;
-			this->ClientSize = System::Drawing::Size(719, 433);
+			this->ClientSize = System::Drawing::Size(717, 442);
 			this->Controls->Add(this->check_Fast);
 			this->Controls->Add(this->b_Save);
 			this->Controls->Add(this->progressBar1);
@@ -851,16 +856,34 @@ namespace reSounder {
 #pragma endregion
 	private: System::Void b_Dry_Click(System::Object^  sender, System::EventArgs^  e) {
 				 if (openFileDialog1->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
-					l_DryFile->Text = openFileDialog1->FileName;
-					host->openDryFile(openFileDialog1->FileName);
-					console->AppendText(host->message + nl);
+					bool succ = true;
+					try {
+						host->openDryFile(openFileDialog1->FileName);
+					}
+					catch (Exception^ e) {
+						succ = false;
+						console->AppendText("VST Host >" + e->Message + nl);
+					}
+					if (succ) {
+						l_DryFile->Text = openFileDialog1->FileName;
+						console->AppendText(host->message + nl);
+					}
 				 }
 			 }
 private: System::Void b_Wet_Click(System::Object^  sender, System::EventArgs^  e) {
 			 if (openFileDialog2->ShowDialog() == System::Windows::Forms::DialogResult::OK){
-					l_WetFile->Text = openFileDialog2->FileName;
+				bool succ = true;
+				try {
 					host->openWetFile(openFileDialog2->FileName);
+				}
+				catch (Exception^ e) {
+					succ = false;
+					console->AppendText("VST Host >" + e->Message + nl);
+				}
+				if (succ) {
+					l_WetFile->Text = openFileDialog2->FileName;
 					console->AppendText(host->message + nl);
+				}
 			 }
 		 }
 private: System::Void b_Effect_Click(System::Object^  sender, System::EventArgs^  e) {
@@ -902,6 +925,7 @@ private: bool openEffectFile(String^ name) {
 							table_Params->Controls[j]->Controls[i]->Visible = true;
 						}
 					}
+					l_EffectFile->Text = name;
 				}
 
 			}
@@ -943,9 +967,10 @@ private: System::Void b_Process_Click(System::Object^  sender, System::EventArgs
 				 //spustime process
 				 host->setProcessed(false);
 				 if (numSelectedParams>0) {
+					console->AppendText("Processing...");
 					progressBar1->Value = 0;
 					host->process(combo_Type->SelectedIndex, selectedParams, volType, stepSize, numSelectedParams, check_Fast->Checked, progressBar1);
-				 
+					console->AppendText("finished" + nl);
 					console->AppendText(host->message + nl);
 				 }
 				 else {
@@ -1069,7 +1094,7 @@ private: System::Void combo_Type_SelectedIndexChanged(System::Object^  sender, S
 			 
 			 paramsToProcess_reset();
 			 bool isEffectLoaded = true;
-			 if (combo_Type->SelectedIndex == 0 || combo_Type->SelectedIndex==1) {	//general a single
+			 if (combo_Type->SelectedIndex == 5) {	//general
 				 l_EffectFile->Text = "- select file -";				
 				 b_Effect->Visible = true;
 				 l_Effect->Visible = true;
@@ -1080,22 +1105,15 @@ private: System::Void combo_Type_SelectedIndexChanged(System::Object^  sender, S
 				 label2->Visible = true;
 			 }
 			 else {	//ostatne typy
-				 /*
-				 b_Effect->Visible = false;
-				 l_Effect->Visible = false;
-				 l_EffectFile->Visible = false;
-				 panel_Step->Visible = false;
-				 panel_Vol->Visible = false;
-				 */
 
 				 //nacitame vst dll
 				 String^ fileName;
 				 switch (combo_Type->SelectedIndex) {
-					 case 2 : fileName = gcnew String(homeDir + "\\BDelay.dll"); break;
-					 case 3 : fileName = gcnew String(homeDir + "\\BEqualizer.dll"); break;
-					 case 4 : fileName = gcnew String(homeDir + "\\BCompressor.dll"); break;
-					 case 5 : fileName = gcnew String(homeDir + "\\BCompressor.dll"); break;
-					 case 6 : fileName = gcnew String(homeDir + "\\BPitchShifter.dll"); break;
+					 case 0 : fileName = gcnew String("BDelay.dll"); break;
+					 case 1 : fileName = gcnew String("BEqualizer.dll"); break;
+					 case 2 : fileName = gcnew String("BCompressor.dll"); break;
+					 case 3 : fileName = gcnew String("BCompressor.dll"); break;
+					 case 4 : fileName = gcnew String("BPitchShifter.dll"); break;
 				 }
 				 isEffectLoaded = openEffectFile(fileName);
 
@@ -1103,7 +1121,7 @@ private: System::Void combo_Type_SelectedIndexChanged(System::Object^  sender, S
 									
 					//pre limiter sfunkcnime iba treshold
 					int numParams = host->getNumParams();	//zistime pocet parametrov v efekte
-					if (combo_Type->SelectedIndex == 4) {	//ak mame zvoleny limiter
+					if (combo_Type->SelectedIndex == 2) {	//ak mame zvoleny limiter
 						for (int i=0; i<numParams; i++) {	//cez vsetky parametre efektu
 							if (i!=5) {	//vsetko okrem treshold-u
 								table_Params->Controls[0]->Controls[i]->Enabled = false;	//znefunkcnenie
@@ -1114,7 +1132,7 @@ private: System::Void combo_Type_SelectedIndexChanged(System::Object^  sender, S
 				}
 			 }
 
-			 if (combo_Type->SelectedIndex==0 || combo_Type->SelectedIndex==1 || combo_Type->SelectedIndex==2 || combo_Type->SelectedIndex==6) {	//ak general, single, delay a pitch
+			 if (combo_Type->SelectedIndex==0 || combo_Type->SelectedIndex==4 || combo_Type->SelectedIndex==5) {	//ak delay, pitch, general
 				 if (isEffectLoaded) {
 					 check_Fast->Visible = true;
 					 
@@ -1123,8 +1141,8 @@ private: System::Void combo_Type_SelectedIndexChanged(System::Object^  sender, S
 					 for (int i=0; i<8; i++) {
 						 panel_Step->Controls[i]->Text = gcnew String("10");
 					 }
-					 if (combo_Type->SelectedIndex == 2) {	//ak zvoleny delayu
-						textBox9->Text = gcnew String("1");		//krok parametru delay nastavime na 1
+					 if (combo_Type->SelectedIndex == 0) {	//ak zvoleny delayu
+						textBox9->Text = gcnew String("1");		//krok parametru delay nastavime na 1%
 						checkBox17->Checked = true;				//volume type pre parameter wet
 						checkBox16->Checked = true;				//volume type pre parameter dry
 					 }

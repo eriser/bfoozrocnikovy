@@ -6,7 +6,11 @@ using namespace std;
 using namespace System;
 using namespace System::IO;
 
-///\brief Sluzi na nacitavanie wav suboru.
+///\brief Sluzi na nacitavanie wav suboru. (managed C++)
+///
+///Drzi si ulozenu aktualnu poziciu v subore a pri zavolani metody GetCurrentSample(chann) vrati vzorku
+///z tejto pozicie zo zvoleneho kanalu. Pre posun na dalsiu poziciu je potrebne volat metodu step().
+
 public ref class WaveReader {
 
 private:
@@ -42,7 +46,7 @@ public:
 	///\brief Vracia hlavicku suboru.
 	array<Byte> ^ getHeader();		//vracia hlavicku
 	///\brief Vracia aktualnu vzorku zo zvoleneho kanalu.
-	///\param channel kanal, ktoreho vzorku chceme
+	///\param channel kanal, ktoreho vzorku chceme (typicky 0==left a 1==right)
 	float	getCurrentSample(int channel);	//vrati aktualnu vzorku z urceneho kanalu
 	///\brief Prejde na dalsie vzorky.
 	void	step();				//prejde na dalsie sample

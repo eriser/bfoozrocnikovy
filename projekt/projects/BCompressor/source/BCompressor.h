@@ -16,6 +16,8 @@ enum {
 };
 
 ///\brief Implementovany efekt kompresor ako VST efekt.
+///
+///Dokumentacia k metodam je uvedena v dokumentacii k VST SDK.
 
 class BCompressor : public AudioEffectX
 {

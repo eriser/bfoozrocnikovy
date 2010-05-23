@@ -1,19 +1,33 @@
 #pragma once
 #include <cmath>
+///\brief Sluzi na vypocet priamej aj spatnej Fourierovej transformacie.
 class Fft {
-public : Fft(float *fftBuffer, long fftFrameSize, long sign)
+
+///\brief Konstruktor, hned pri zavolani spocita Fourierov rozklad.
+//
+///Priama trasnsformaica sa zavola so znamienkom sign==-1.
+///Naplni fftBuffer[0..2*fftFameSize-1] Fourierovym rozkladom dat v fftBuffer[0..2*fftFrameSize-1].
+///Vysledne pole obsahuje kosinusove a sinusove zlozky signalu striedavym sposobom, cize fftBuffer[0]==Cos[0] a fftBuffer[1]==Sin[0] atd.
+///Hodnota fftFrameSize musi byt mocnina 2. Na vstupe ocakava signal sposobom {in[0],0.,in[1],0.,in[2],0.,...}.
+///Transformovane frekvencie sa nachadzaju v fftBuffer[0..fftFrameSize].
+///<br/>Inverzna transformacia sa zavola so znamienkom sign==1.
+///\param fftBuffer pole pre ukladanie signalu a frekvencneho rozkladu
+///\param fftFrameSize velkost transformacie, polovica dlzky pola fftBuffer
+///\param sign znamienko, ktore urcuje smer transformacie, -1==priama a 1==inverzna transformacia
+
+public : Fft(float *fftBuffer, long fftFrameSize, long sign) {
 /* 
 	FFT routine, (C)1996 S.M.Bernsee. Sign = -1 is FFT, 1 is iFFT (inverse)
 	Fills fftBuffer[0...2*fftFrameSize-1] with the Fourier transform of the
 	time domain data in fftBuffer[0...2*fftFrameSize-1]. The FFT array takes
 	and returns the cosine and sine parts in an interleaved manner, ie.
 	fftBuffer[0] = cosPart[0], fftBuffer[1] = sinPart[0], asf. fftFrameSize
-	must be a power of 2. It expects a complex input signal (see footnote 2),
+	must be a power of 2. It expects a complex input signal,
 	ie. when working with 'common' audio signals our input signal has to be
 	passed as {in[0],0.,in[1],0.,in[2],0.,...} asf. In that case, the transform
 	of the frequencies of interest is in fftBuffer[0...fftFrameSize].
 */
-	{
+
 		float pi = (float)3.141592653589793238462643383279502;
 		float wr, wi, arg, *p1, *p2, temp;
 		float tr, ti, ur, ui, *p1r, *p1i, *p2r, *p2i;

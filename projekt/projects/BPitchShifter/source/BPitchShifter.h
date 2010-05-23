@@ -13,6 +13,8 @@ enum {
 };
 
 ///\brief Implementovany efekt pitch-shifter ako VST efekt.
+///
+///Dokumentacia k metodam je uvedena v dokumentacii k VST SDK.
 
 class BPitchShifter : public AudioEffectX
 {

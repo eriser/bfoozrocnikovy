@@ -12,6 +12,9 @@ enum
 };
 
 ///\brief Implementovany efekt delay ako VST efekt.
+///
+///Dokumentacia k metodam je uvedena v dokumentacii k VST SDK.
+
 class BDelay : public AudioEffectX
 {
 public:
